@@ -75,6 +75,7 @@ fn read_word(r: &mut impl Reader) -> Result<String, ReadError> {
     Ok(chars.into_iter().collect())
 }
 
+#[inline]
 fn is_word_boundary(c: char) -> bool {
     c.is_whitespace() || matches!(c, '(' | ')' | '\'' | ',' | '"' | ';')
 }

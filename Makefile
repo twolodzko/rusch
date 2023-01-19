@@ -1,8 +1,8 @@
 BINARY := $(CURDIR)/rusch
 
 rusch: src/*
-	cargo build --release
-	cp -f target/release/rusch $(BINARY)
+	cargo build --profile optimized
+	cp -f target/optimized/rusch $(BINARY)
 
 .PHONY: repl
 repl:

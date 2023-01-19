@@ -389,6 +389,7 @@ fn set(args: &Args, env: &mut Env) -> FuncResult {
     }
 }
 
+#[inline]
 fn let_impl(args: &Args, call_env: &mut Env, eval_env: &mut Env) -> TcoResult {
     match args.head() {
         Some(Sexpr::List(ref list)) => {

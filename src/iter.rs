@@ -9,6 +9,7 @@ where
     T: Clone,
     E: Clone,
 {
+    #[inline]
     pub fn new(iter: I) -> TryIter<I, T, E>
     where
         I: Iterator<Item = Result<T, E>>,
@@ -16,6 +17,7 @@ where
         TryIter { iter, err: None }
     }
 
+    #[inline]
     pub fn err(&self) -> Option<Result<T, E>> {
         self.err.clone()
     }

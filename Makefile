@@ -5,7 +5,7 @@ rusch: src/*
 
 .PHONY: repl
 repl:
-	@ cargo run
+	@ cargo run --quiet
 
 .PHONY: test
 test: lint unit-test integration-test

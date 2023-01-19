@@ -252,6 +252,13 @@ impl fmt::Display for Lambda {
     }
 }
 
+impl From<Sexpr> for List<Sexpr> {
+    #[inline]
+    fn from(elem: Sexpr) -> Self {
+        List::empty().push_front(elem)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Lambda, Sexpr};

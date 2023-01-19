@@ -108,7 +108,7 @@ fn cons(args: &Args, env: &mut Env) -> FuncResult {
     }
     let list = match rhs {
         Some(Sexpr::List(list)) => list,
-        Some(sexpr) => List::from_element(sexpr),
+        Some(sexpr) => List::from(sexpr),
         None => return Err(Error::WrongArgNum),
     };
     Ok(Sexpr::List(list.push_front(lhs.unwrap())))
@@ -623,12 +623,9 @@ mod tests {
 
         assert_eval_eq!(
             "(cons 1 '())",
-            Ok(Sexpr::List(List::from_element(Sexpr::Integer(1))))
+            Ok(Sexpr::List(List::from(Sexpr::Integer(1))))
         );
-        assert_eval_eq!(
-            "(cons '() '())",
-            Ok(Sexpr::List(List::from_element(Sexpr::null())))
-        );
+        assert_eval_eq!("(cons '() '())", Ok(Sexpr::List(List::from(Sexpr::null()))));
         assert_eval_eq!(
             "(cons 1 2)",
             Ok(Sexpr::from(vec![Sexpr::Integer(1), Sexpr::Integer(2)]))

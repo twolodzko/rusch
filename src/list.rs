@@ -26,14 +26,6 @@ impl<T> Pair<T> {
 }
 
 impl<T> List<T> {
-    /// Create new list from a single element
-    #[inline]
-    pub fn from_element(elem: T) -> Self {
-        List {
-            head: Pair::new(elem, None),
-        }
-    }
-
     #[inline]
     pub fn empty() -> Self {
         List { head: None }

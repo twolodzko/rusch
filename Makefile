@@ -1,7 +1,8 @@
+BINARY := $(CURDIR)/rusch
 
 rusch: src/*
 	cargo build --release
-	cp -f target/release/rusch .
+	cp -f target/release/rusch $(BINARY)
 
 .PHONY: repl
 repl:
@@ -20,7 +21,7 @@ unit-test:
 
 .PHONY: integration-test
 integration-test: rusch
-	cd examples/the-little-schemer/ && ../../rusch run-all.scm
+	cd examples/the-little-schemer/ && $(BINARY) run-all.scm
 
 .PHONY: lines
 lines:

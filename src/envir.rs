@@ -2,9 +2,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-#[derive(Debug, PartialEq)]
-pub struct NotFound;
-
 #[derive(Debug, PartialEq, Clone)]
 pub struct Env<T>(Option<Rc<RefCell<EnvContainer<T>>>>);
 

@@ -53,18 +53,6 @@ where
         }
     }
 
-    /// Set (recursively) value associated with the key if the key is available
-    #[inline]
-    pub fn set(&mut self, key: &String, val: &T) -> bool {
-        match self.find_env(key) {
-            Some(ref mut env) => {
-                env.insert(key, val);
-                true
-            }
-            None => false,
-        }
-    }
-
     /// Find (recursively) the enviroment that has some value associated with the key
     #[inline]
     pub fn find_env(&self, key: &String) -> Option<Self> {

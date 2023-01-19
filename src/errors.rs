@@ -4,12 +4,12 @@ use std::fmt;
 pub enum Error<T> {
     NotANumber(T),
     NotCallable(T),
-    NotFound(std::string::String),
+    NotFound(String),
     WrongArg(T),
     WrongArgNum,
     CannotParse(T),
-    Custom(std::string::String),
-    ReadError(std::string::String),
+    Custom(String),
+    ReadError(String),
 }
 
 impl<T> fmt::Display for Error<T>
@@ -36,7 +36,7 @@ pub enum ReadError {
     EndOfInput,
     Unexpected(char),
     Missing(char),
-    IoError(std::string::String),
+    IoError(String),
 }
 
 impl fmt::Display for ReadError {

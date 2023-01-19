@@ -134,7 +134,7 @@ fn lambda(args: &Args, env: &mut Env) -> FuncResult {
                 Sexpr::Symbol(ref name) => Ok(name.clone()),
                 sexpr => Err(Error::WrongArg(sexpr.clone())),
             }));
-            let vars: Vec<std::string::String> = iter.collect();
+            let vars: Vec<String> = iter.collect();
             match iter.err() {
                 Some(Err(err)) => Err(err),
                 Some(_) => unreachable!(),
@@ -509,7 +509,7 @@ fn to_float(args: &Args, env: &mut Env) -> FuncResult {
 }
 
 #[inline]
-fn stringify(args: &Args, env: &mut Env) -> Result<std::string::String, Error<Sexpr>> {
+fn stringify(args: &Args, env: &mut Env) -> Result<String, Error<Sexpr>> {
     let iter = &mut eval_iter(args, env);
     let string = iter
         .map(|elem| elem.to_string())

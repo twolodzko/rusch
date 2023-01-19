@@ -29,7 +29,7 @@ pub type TcoFunc = fn(&List<Sexpr>, &mut Env<Sexpr>) -> TcoResult;
 
 #[derive(Clone, PartialEq)]
 pub struct Lambda {
-    pub args: Vec<std::string::String>,
+    pub args: Vec<String>,
     pub body: List<Sexpr>,
     pub env: Env<Sexpr>,
 }
@@ -67,7 +67,7 @@ impl fmt::Display for List<Sexpr> {
         let stringified = self
             .iter()
             .map(|elem| elem.to_string())
-            .collect::<Vec<std::string::String>>()
+            .collect::<Vec<String>>()
             .join(" ");
         write!(f, "({})", stringified)
     }
@@ -227,7 +227,7 @@ impl ops::Div<Sexpr> for Sexpr {
 }
 
 impl Lambda {
-    pub fn new(args: &[std::string::String], body: &List<Sexpr>, env: &Env<Sexpr>) -> Box<Self> {
+    pub fn new(args: &[String], body: &List<Sexpr>, env: &Env<Sexpr>) -> Box<Self> {
         Box::new(Lambda {
             args: args.to_owned(),
             body: body.clone(),
@@ -242,7 +242,7 @@ impl fmt::Display for Lambda {
             .body
             .iter()
             .map(|elem| elem.to_string())
-            .collect::<Vec<std::string::String>>()
+            .collect::<Vec<String>>()
             .join(" ");
         let args = self.args.join(" ");
         if body.is_empty() {
@@ -340,7 +340,7 @@ mod tests {
     fn fmt_lambda() {
         assert_fmt_eq!(
             Sexpr::Lambda(Lambda::new(
-                &Vec::<std::string::String>::new(),
+                &Vec::<String>::new(),
                 &List::empty(),
                 &Env::new()
             ),),

@@ -27,6 +27,7 @@ where
     }
 
     /// Create environment inheriting from the current one
+    #[inline]
     pub fn branch(&self) -> Self {
         Env(Some(Rc::new(RefCell::new(EnvContainer {
             local: HashMap::new(),
@@ -35,12 +36,14 @@ where
     }
 
     /// Save key-value pair to the environment
+    #[inline]
     pub fn insert(&mut self, key: &String, val: &T) {
         let mut env = self.unwrap().borrow_mut();
         env.local.insert(key.to_string(), val.clone());
     }
 
     /// Get (recursively) value associated with the key if available
+    #[inline]
     pub fn get(&self, key: &String) -> Option<T> {
         let env = self.unwrap().borrow();
         if let Some(val) = env.local.get(&key.clone()) {
@@ -54,6 +57,7 @@ where
     }
 
     /// Set (recursively) value associated with the key if the key is available
+    #[inline]
     pub fn set(&mut self, key: &String, val: &T) -> bool {
         match self.find_env(key) {
             Some(ref mut env) => {
@@ -65,6 +69,7 @@ where
     }
 
     /// Find (recursively) the enviroment that has some value associated with the key
+    #[inline]
     pub fn find_env(&self, key: &String) -> Option<Self> {
         let env = self.unwrap().borrow();
         if env.local.get(key).is_some() {

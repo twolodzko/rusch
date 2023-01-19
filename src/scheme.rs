@@ -508,25 +508,30 @@ fn to_float(args: &Args, env: &mut Env) -> FuncResult {
     }
 }
 
-fn to_string(args: &Args, env: &mut Env) -> FuncResult {
+#[inline]
+fn stringify(args: &Args, env: &mut Env) -> Result<std::string::String, Error<Sexpr>> {
     let iter = &mut eval_iter(args, env);
     let string = iter
         .map(|elem| elem.to_string())
         .collect::<Vec<String>>()
         .join(" ");
-    match iter.err() {
-        Some(err) => err,
-        None => Ok(Sexpr::String(string)),
+    if let Some(Err(err)) = iter.err() {
+        return Err(err);
     }
+    Ok(string)
+}
+
+fn to_string(args: &Args, env: &mut Env) -> FuncResult {
+    stringify(args, env).map(Sexpr::String)
 }
 
 fn to_error(args: &Args, env: &mut Env) -> FuncResult {
-    // TODO: refactor later
-    match to_string(args, env) {
-        Ok(Sexpr::String(msg)) => Err(Error::Custom(msg)),
-        Ok(_) => unreachable!(),
-        err => err,
-    }
+    Err(Error::Custom(stringify(args, env)?))
+}
+
+fn display(args: &Args, env: &mut Env) -> FuncResult {
+    println!("{}", stringify(args, env)?);
+    Ok(Sexpr::Nil)
 }
 
 fn evalfn(args: &Args, env: &mut Env) -> FuncResult {
@@ -554,14 +559,6 @@ fn load(args: &Args, env: &mut Env) -> FuncResult {
         }
     }
     Ok(last)
-}
-
-fn display(args: &Args, env: &mut Env) -> FuncResult {
-    match to_string(args, env)? {
-        Sexpr::String(s) => println!("{}", s),
-        _ => unreachable!(),
-    };
-    Ok(Sexpr::Nil)
 }
 
 #[cfg(test)]

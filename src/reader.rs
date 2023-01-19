@@ -1,6 +1,7 @@
-use crate::errors::ReadError;
 use std::iter::Peekable;
 use std::vec::IntoIter;
+
+use crate::errors::ReadError;
 
 pub trait Reader {
     fn peek(&mut self) -> Result<char, ReadError>;

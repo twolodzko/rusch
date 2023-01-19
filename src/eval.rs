@@ -1,25 +1,22 @@
 use crate::envir;
-use crate::errors::Error;
-use crate::errors::ReadError;
+use crate::errors::{Error, ReadError};
 use crate::io::FileReader;
 use crate::iter::TryIter;
 use crate::list::List;
 use crate::parser::read_sexpr;
-use crate::types::TcoResult;
-use crate::types::{FuncResult, Lambda, Sexpr};
+use crate::types::{FuncResult, Lambda, Sexpr, TcoResult};
 
 type EvalResult = Result<Sexpr, Error<Sexpr>>;
 type Env = envir::Env<Sexpr>;
 
 pub fn eval(sexpr: &Sexpr, env: &mut Env) -> EvalResult {
-    use crate::types::Sexpr::*;
     let mut sexpr = sexpr.clone();
     let mut env = env.clone();
     loop {
         match sexpr {
-            Symbol(ref name) => return env.get(name).ok_or(Error::NotFound(name.clone())),
-            Quote(ref quoted) => return Ok(*quoted.clone()),
-            List(ref list) => match eval_list(list, &mut env)? {
+            Sexpr::Symbol(ref name) => return env.get(name).ok_or(Error::NotFound(name.clone())),
+            Sexpr::Quote(ref quoted) => return Ok(*quoted.clone()),
+            Sexpr::List(ref list) => match eval_list(list, &mut env)? {
                 (s, None) => return Ok(s),
                 (s, Some(e)) => {
                     sexpr = s;

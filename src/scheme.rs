@@ -810,7 +810,7 @@ mod tests {
 
     #[test]
     fn iffn() {
-        use crate::types::Sexpr::*;
+        use crate::types::Sexpr::Integer;
 
         assert_eval_eq!("(if #t 1 2)", Ok(Integer(1)));
         assert_eval_eq!("(if #f 1 2)", Ok(Integer(2)));

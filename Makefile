@@ -20,8 +20,8 @@ unit-test:
 	cargo test
 
 .PHONY: integration-test
-integration-test: rusch
-	cd examples/the-little-schemer/ && $(BINARY) run-all.scm
+integration-test:
+	cd examples/the-little-schemer/ && cargo run -- run-all.scm
 
 .PHONY: lines
 lines:

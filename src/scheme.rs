@@ -128,23 +128,9 @@ fn begin(args: &Args, env: &mut Env) -> TcoResult {
 }
 
 fn lambda(args: &Args, env: &mut Env) -> FuncResult {
+    let body = args.tail().unwrap_or_default();
     match args.head() {
-        Some(Sexpr::List(ref list)) => {
-            let iter = &mut TryIter::new(list.iter().map(|elem| match elem {
-                Sexpr::Symbol(ref name) => Ok(name.clone()),
-                sexpr => Err(Error::WrongArg(sexpr.clone())),
-            }));
-            let vars: Vec<String> = iter.collect();
-            match iter.err() {
-                Some(Err(err)) => Err(err),
-                Some(_) => unreachable!(),
-                None => Ok(Sexpr::Lambda(Lambda::new(
-                    &vars,
-                    &args.tail().unwrap_or_default(),
-                    &env.clone(),
-                ))),
-            }
-        }
+        Some(Sexpr::List(ref vars)) => Lambda::from(vars, &body, env),
         Some(sexpr) => Err(Error::WrongArg(sexpr.clone())),
         None => Err(Error::WrongArgNum),
     }

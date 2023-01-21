@@ -90,9 +90,25 @@ pub fn eval_file(filename: &str, env: &mut Env) -> EvalResult {
 }
 
 impl Lambda {
+    pub fn from(vars: &List<Sexpr>, body: &List<Sexpr>, env: &mut Env) -> FuncResult {
+        let iter = &mut TryIter::new(vars.iter().map(|elem| match elem {
+            Sexpr::Symbol(ref name) => Ok(name.clone()),
+            sexpr => Err(Error::WrongArg(sexpr.clone())),
+        }));
+        let vars: Vec<String> = iter.collect();
+        if let Some(Err(err)) = iter.err() {
+            return Err(err);
+        }
+        Ok(Sexpr::Lambda(Box::new(Lambda {
+            vars,
+            body: body.clone(),
+            env: env.clone(),
+        })))
+    }
+
     fn call(&self, args: &List<Sexpr>, env: &mut Env) -> TcoResult {
         let local = &mut self.env.branch();
-        let vars = &mut self.args.iter();
+        let vars = &mut self.vars.iter();
         let args = &mut args.iter();
 
         loop {

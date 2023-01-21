@@ -29,7 +29,7 @@ pub type TcoFunc = fn(&List<Sexpr>, &mut Env<Sexpr>) -> TcoResult;
 
 #[derive(Clone, PartialEq)]
 pub struct Lambda {
-    pub args: Vec<String>,
+    pub vars: Vec<String>,
     pub body: List<Sexpr>,
     pub env: Env<Sexpr>,
 }
@@ -226,16 +226,6 @@ impl ops::Div<Sexpr> for Sexpr {
     }
 }
 
-impl Lambda {
-    pub fn new(args: &[String], body: &List<Sexpr>, env: &Env<Sexpr>) -> Box<Self> {
-        Box::new(Lambda {
-            args: args.to_owned(),
-            body: body.clone(),
-            env: env.clone(),
-        })
-    }
-}
-
 impl fmt::Display for Lambda {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let body = self
@@ -244,7 +234,7 @@ impl fmt::Display for Lambda {
             .map(|elem| elem.to_string())
             .collect::<Vec<String>>()
             .join(" ");
-        let args = self.args.join(" ");
+        let args = self.vars.join(" ");
         if body.is_empty() {
             return write!(f, "(lambda ({}))", args);
         }
@@ -346,33 +336,33 @@ mod tests {
     #[test]
     fn fmt_lambda() {
         assert_fmt_eq!(
-            Sexpr::Lambda(Lambda::new(
-                &Vec::<String>::new(),
-                &List::empty(),
-                &Env::new()
-            ),),
+            Sexpr::Lambda(Box::new(Lambda {
+                vars: Vec::<String>::new(),
+                body: List::empty(),
+                env: Env::new(),
+            })),
             "(lambda ())"
         );
 
         assert_fmt_eq!(
-            Sexpr::Lambda(Lambda::new(
-                &vec![String::from("x")],
-                &List::from(vec![Sexpr::symbol("x")]),
-                &Env::new()
-            )),
+            Sexpr::Lambda(Box::new(Lambda {
+                vars: vec![String::from("x")],
+                body: List::from(vec![Sexpr::symbol("x")]),
+                env: Env::new(),
+            })),
             "(lambda (x) x)"
         );
 
         assert_fmt_eq!(
-            Sexpr::Lambda(Lambda::new(
-                &vec![String::from("x"), String::from("y")],
-                &List::from(vec![Sexpr::List(List::from(vec![
+            Sexpr::Lambda(Box::new(Lambda {
+                vars: vec![String::from("x"), String::from("y")],
+                body: List::from(vec![Sexpr::List(List::from(vec![
                     Sexpr::symbol("+"),
                     Sexpr::symbol("x"),
                     Sexpr::symbol("y")
                 ]))]),
-                &Env::new()
-            )),
+                env: Env::new(),
+            })),
             "(lambda (x y) (+ x y))"
         );
     }

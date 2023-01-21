@@ -27,6 +27,7 @@ impl<I: Iterator<Item = Result<T, E>>, T, E> Iterator for TryIter<I, T, E> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
+        debug_assert!(self.err.is_none()); // we should not need to check it in runtime
         match self.iter.next()? {
             Ok(result) => Some(result),
             err => {

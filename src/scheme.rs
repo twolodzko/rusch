@@ -319,7 +319,7 @@ fn condfn(args: &Args, env: &mut Env) -> TcoResult {
 }
 
 #[inline]
-fn bind(args: &Args, eval_env: &mut Env, save_env: &mut Env) -> FuncResult {
+fn eval_and_bind(args: &Args, eval_env: &mut Env, save_env: &mut Env) -> FuncResult {
     let mut iter = args.iter();
 
     let key = match iter.next() {
@@ -344,7 +344,7 @@ fn bind(args: &Args, eval_env: &mut Env, save_env: &mut Env) -> FuncResult {
 }
 
 fn define(args: &Args, env: &mut Env) -> FuncResult {
-    bind(args, &mut env.clone(), &mut env.clone())
+    eval_and_bind(args, &mut env.clone(), &mut env.clone())
 }
 
 fn set(args: &Args, env: &mut Env) -> FuncResult {
@@ -380,7 +380,7 @@ fn let_impl(args: &Args, call_env: &mut Env, eval_env: &mut Env) -> TcoResult {
     match args.head() {
         Some(Sexpr::List(ref list)) => {
             let iter = &mut TryIter::new(list.iter().map(|elem| match elem {
-                Sexpr::List(ref binding) => bind(binding, call_env, eval_env),
+                Sexpr::List(ref binding) => eval_and_bind(binding, call_env, eval_env),
                 sexpr => Err(Error::WrongArg(sexpr.clone())),
             }));
             iter.last(); // iterate through all the elements

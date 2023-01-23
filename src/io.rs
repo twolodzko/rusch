@@ -118,7 +118,7 @@ mod tests {
 
         let reader = &mut FileReader::from(filename).unwrap();
         for ch in chars {
-            assert_eq!(Ok(ch.clone()), reader.next());
+            assert_eq!(Ok(*ch), reader.next());
         }
     }
 }

@@ -43,7 +43,7 @@ where
     #[inline]
     pub fn get(&self, key: &String) -> Option<T> {
         let env = self.unwrap().borrow();
-        if let Some(val) = env.local.get(&key.clone()) {
+        if let Some(val) = env.local.get(key) {
             Some(val.clone())
         } else {
             match env.parent {

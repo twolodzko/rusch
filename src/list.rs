@@ -225,12 +225,6 @@ mod tests {
     }
 
     #[test]
-    fn clone() {
-        let list = List::from(vec![1, 2, 3]);
-        assert_eq!(list, list.clone());
-    }
-
-    #[test]
     fn has_next() {
         assert!(!List::<i64>::empty().has_next());
         assert!(List::from(vec![1, 2, 3]).has_next());

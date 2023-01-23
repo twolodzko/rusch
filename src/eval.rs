@@ -14,7 +14,7 @@ pub fn eval(sexpr: &Sexpr, env: &mut Env) -> EvalResult {
     let mut env = env.clone();
     loop {
         match sexpr {
-            Sexpr::Symbol(ref name) => return env.get(name).ok_or(Error::NotFound(name.clone())),
+            Sexpr::Symbol(name) => return env.get(&name).ok_or(Error::NotFound(name)),
             Sexpr::Quote(ref quoted) => return Ok(*quoted.clone()),
             Sexpr::List(ref list) => match eval_list(list, &mut env)? {
                 (s, None) => return Ok(s),
@@ -23,7 +23,7 @@ pub fn eval(sexpr: &Sexpr, env: &mut Env) -> EvalResult {
                     env = e;
                 }
             },
-            _ => return Ok(sexpr.clone()),
+            _ => return Ok(sexpr),
         }
     }
 }
@@ -92,10 +92,10 @@ pub fn eval_file(filename: &str, env: &mut Env) -> EvalResult {
 impl Lambda {
     pub fn from(vars: &List<Sexpr>, body: &List<Sexpr>, env: &mut Env) -> FuncResult {
         let iter = &mut TryIter::new(vars.iter().map(|elem| match elem {
-            Sexpr::Symbol(ref name) => Ok(name.clone()),
+            Sexpr::Symbol(name) => Ok(name),
             sexpr => Err(Error::WrongArg(sexpr.clone())),
         }));
-        let vars: Vec<String> = iter.collect();
+        let vars: Vec<String> = iter.cloned().collect();
         if let Some(Err(err)) = iter.err() {
             return Err(err);
         }

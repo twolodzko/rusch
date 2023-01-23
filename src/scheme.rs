@@ -78,7 +78,10 @@ fn eval_one_arg(args: &Args, env: &mut Env) -> FuncResult {
 
 fn car(args: &Args, env: &mut Env) -> FuncResult {
     match eval_one_arg(args, env)? {
-        Sexpr::List(list) => list.head().cloned().ok_or(Error::WrongArg(Sexpr::null())),
+        Sexpr::List(list) => list
+            .head()
+            .cloned()
+            .ok_or(Error::WrongArg(Sexpr::List(list))),
         sexpr => Err(Error::WrongArg(sexpr)),
     }
 }

@@ -34,9 +34,9 @@ where
 
     /// Save key-value pair to the environment
     #[inline]
-    pub fn insert(&mut self, key: &String, val: &T) {
+    pub fn insert(&mut self, key: &String, val: T) {
         let mut env = self.unwrap().borrow_mut();
-        env.local.insert(key.to_string(), val.clone());
+        env.local.insert(key.to_string(), val);
     }
 
     /// Get (recursively) value associated with the key if available
@@ -79,9 +79,9 @@ where
     T: Clone,
 {
     fn from(records: [(&str, T); N]) -> Self {
-        let mut env = Env::new();
+        let mut env: Env<T> = Env::new();
         for (key, val) in records.iter() {
-            env.insert(&String::from(*key), val);
+            env.insert(&String::from(*key), val.clone());
         }
         env
     }
@@ -106,14 +106,14 @@ mod tests {
         let mut env = Env::<Sexpr>::new();
         assert_eq!(env.get(&String::from("foo")), None);
 
-        env.insert(&String::from("foo"), &Sexpr::Integer(42));
+        env.insert(&String::from("foo"), Sexpr::Integer(42));
         assert_eq!(env.get(&String::from("foo")), Some(Sexpr::Integer(42)));
 
-        env.insert(&String::from("bar"), &Sexpr::True);
+        env.insert(&String::from("bar"), Sexpr::True);
         assert_eq!(env.get(&String::from("foo")), Some(Sexpr::Integer(42)));
         assert_eq!(env.get(&String::from("bar")), Some(Sexpr::True));
 
-        env.insert(&String::from("foo"), &Sexpr::String(String::from("ok?")));
+        env.insert(&String::from("foo"), Sexpr::String(String::from("ok?")));
         assert_eq!(
             env.get(&String::from("foo")),
             Some(Sexpr::String(String::from("ok?")))
@@ -123,14 +123,14 @@ mod tests {
     #[test]
     fn branch() {
         let mut root = Env::new();
-        root.insert(&String::from("foo"), &Sexpr::Integer(42));
+        root.insert(&String::from("foo"), Sexpr::Integer(42));
 
         {
             let mut local = root.branch();
             assert_eq!(root.get(&String::from("foo")), Some(Sexpr::Integer(42)));
             assert_eq!(local.get(&String::from("foo")), Some(Sexpr::Integer(42)));
 
-            local.insert(&String::from("foo"), &Sexpr::True);
+            local.insert(&String::from("foo"), Sexpr::True);
             assert_eq!(root.get(&String::from("foo")), Some(Sexpr::Integer(42)));
             assert_eq!(local.get(&String::from("foo")), Some(Sexpr::True));
         }

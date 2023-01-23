@@ -115,7 +115,7 @@ impl Lambda {
             match (vars.next(), args.next()) {
                 (Some(var), Some(arg)) => {
                     let val = eval(arg, env)?;
-                    local.insert(var, &val);
+                    local.insert(var, val);
                 }
                 (None, None) => break,
                 _ => return Err(Error::WrongArgNum),
@@ -184,8 +184,8 @@ mod tests {
     #[test]
     fn symbols() {
         let mut env = envir::Env::new();
-        env.insert(&String::from("true"), &Sexpr::True);
-        env.insert(&String::from("foo"), &Sexpr::symbol("bar"));
+        env.insert(&String::from("true"), Sexpr::True);
+        env.insert(&String::from("foo"), Sexpr::symbol("bar"));
 
         assert_eq!(eval(&Sexpr::symbol("true"), &mut env), Ok(Sexpr::True));
         assert_eq!(
@@ -212,7 +212,7 @@ mod tests {
     #[test]
     fn not_callable_list() {
         let mut env = envir::Env::new();
-        env.insert(&String::from("x"), &Sexpr::Integer(42));
+        env.insert(&String::from("x"), Sexpr::Integer(42));
 
         // (x #t #f) => (42 #t #f) => Err
         assert_eq!(
@@ -229,7 +229,7 @@ mod tests {
         let mut env = envir::Env::new();
         env.insert(
             &String::from("first"),
-            &Sexpr::Func(|args, &mut _| Ok(args.head().unwrap().clone())),
+            Sexpr::Func(|args, &mut _| Ok(args.head().unwrap().clone())),
         );
         // (fitst 1 2) => 1
         assert_eq!(
@@ -261,8 +261,8 @@ mod tests {
     #[test]
     fn iterator() {
         let mut env = envir::Env::new();
-        env.insert(&String::from("a"), &Sexpr::Integer(1));
-        env.insert(&String::from("b"), &Sexpr::Integer(2));
+        env.insert(&String::from("a"), Sexpr::Integer(1));
+        env.insert(&String::from("b"), Sexpr::Integer(2));
 
         let list = List::from(vec![
             Sexpr::symbol("a"),

@@ -1,9 +1,22 @@
 use std::env;
 
+use rusch::envir::Env;
 use rusch::eval::{eval, eval_file};
 use rusch::io::StdinReader;
 use rusch::parser::read_sexpr;
 use rusch::scheme::root_env;
+use rusch::types::Sexpr;
+
+fn eval_and_print(sexpr: &Sexpr, env: &mut Env<Sexpr>) {
+    match eval(sexpr, env) {
+        Ok(result) => {
+            if result != Sexpr::Nil {
+                println!("{}", result)
+            }
+        }
+        Err(msg) => println!("Error: {}", msg),
+    }
+}
 
 fn main() {
     let args = &mut env::args().skip(1);
@@ -16,10 +29,7 @@ fn main() {
         let reader = &mut StdinReader::new().unwrap();
         loop {
             match read_sexpr(reader) {
-                Ok(ref sexpr) => match eval(sexpr, env) {
-                    Ok(result) => println!("{}", result),
-                    Err(msg) => println!("Error: {}", msg),
-                },
+                Ok(ref sexpr) => eval_and_print(sexpr, env),
                 Err(msg) => println!("Error: {}", msg),
             }
         }

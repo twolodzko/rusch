@@ -335,8 +335,8 @@ fn eval_and_bind(args: &Args, eval_env: &mut Env, save_env: &mut Env) -> FuncRes
                 return Err(Error::WrongArgNum);
             }
             let val = eval(sexpr, eval_env)?;
-            save_env.insert(key, &val);
-            Ok(val)
+            save_env.insert(key, val);
+            Ok(Sexpr::Nil)
         }
         // missing second arg
         None => Err(Error::WrongArgNum),
@@ -368,8 +368,8 @@ fn set(args: &Args, env: &mut Env) -> FuncResult {
 
     match env.find_env(key) {
         Some(ref mut local) => {
-            local.insert(key, &val);
-            Ok(val)
+            local.insert(key, val);
+            Ok(Sexpr::Nil)
         }
         None => Err(Error::NotFound(key.clone())),
     }
@@ -1038,13 +1038,13 @@ mod tests {
     fn set() {
         let root = &mut root_env();
         let mut local1 = root.branch();
-        local1.insert(&String::from("foo"), &Sexpr::Integer(42));
+        local1.insert(&String::from("foo"), Sexpr::Integer(42));
         let mut local2 = local1.branch();
 
         assert_eq!(local2.get(&String::from("foo")), Some(Sexpr::Integer(42)));
         assert_eq!(
             parse_eval!("(set! foo (car (list 'bar)))", &mut local2),
-            Ok(Sexpr::symbol("bar"))
+            Ok(Sexpr::Nil)
         );
 
         assert_eq!(local2.get(&String::from("foo")), Some(Sexpr::symbol("bar")));

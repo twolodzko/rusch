@@ -23,6 +23,10 @@ unit-test:
 integration-test:
 	cd examples/the-little-schemer/ && cargo run -- run-all.scm
 
+.PHONY: benchmark
+benchmark: rusch
+	cd examples/the-little-schemer/ && hyperfine -m 500 --warmup 10 'gosch run-all.scm' '../../rusch run-all.scm'
+
 .PHONY: lines
 lines:
 	@ find . -type f -name "*.rs" -exec awk '1;/#[cfg\(test\)]/{exit}' {} \; | grep . | wc -l

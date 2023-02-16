@@ -18,8 +18,7 @@ pub fn read_sexpr(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
         }
         '\'' => {
             r.next()?;
-            let obj = read_sexpr(r)?;
-            Ok(Sexpr::quote(obj))
+            read_quote(r)
         }
         '"' => {
             r.next()?;
@@ -114,6 +113,14 @@ fn read_list(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
         list = list.push_front(sexpr);
     }
     Ok(Sexpr::List(list.rev()))
+}
+
+fn read_quote(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
+    let mut list = List::empty();
+    let obj = read_sexpr(r)?;
+    list = list.push_front(obj);
+    list = list.push_front(Sexpr::symbol("quote"));
+    Ok(Sexpr::List(list))
 }
 
 #[inline]
@@ -230,7 +237,13 @@ mod tests {
     #[test]
     fn quote() {
         let mut r = StringReader::from("'foo");
-        assert_eq!(read_sexpr(&mut r), Ok(Sexpr::quote(Sexpr::symbol("foo"))));
+        assert_eq!(
+            read_sexpr(&mut r),
+            Ok(Sexpr::from(vec![
+                Sexpr::symbol("quote"),
+                Sexpr::symbol("foo")
+            ]))
+        );
     }
 
     #[test]

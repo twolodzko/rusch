@@ -15,7 +15,6 @@ pub fn eval(sexpr: &Sexpr, env: &mut Env) -> EvalResult {
     loop {
         match sexpr {
             Sexpr::Symbol(name) => return env.get(&name).ok_or(Error::NotFound(name)),
-            Sexpr::Quote(ref quoted) => return Ok(*quoted.clone()),
             Sexpr::List(ref list) => match eval_list(list, &mut env)? {
                 (s, None) => return Ok(s),
                 (s, Some(e)) => {
@@ -148,40 +147,6 @@ mod tests {
     }
 
     #[test]
-    fn quote() {
-        let mut env = envir::Env::new();
-
-        // bool
-        assert_eq!(eval(&Sexpr::quote(Sexpr::True), &mut env), Ok(Sexpr::True));
-        // symbol
-        assert_eq!(
-            eval(&Sexpr::quote(Sexpr::symbol("foo")), &mut env),
-            Ok(Sexpr::symbol("foo"))
-        );
-        // double quotes
-        assert_eq!(
-            eval(&Sexpr::quote(Sexpr::quote(Sexpr::symbol("foo"))), &mut env),
-            Ok(Sexpr::quote(Sexpr::symbol("foo")))
-        );
-        // list
-        assert_eq!(
-            eval(
-                &Sexpr::quote(Sexpr::from(vec![
-                    Sexpr::Integer(1),
-                    Sexpr::Integer(2),
-                    Sexpr::Integer(3)
-                ])),
-                &mut env
-            ),
-            Ok(Sexpr::from(vec![
-                Sexpr::Integer(1),
-                Sexpr::Integer(2),
-                Sexpr::Integer(3)
-            ]))
-        )
-    }
-
-    #[test]
     fn symbols() {
         let mut env = envir::Env::new();
         env.insert(&String::from("true"), Sexpr::True);
@@ -269,14 +234,12 @@ mod tests {
             Sexpr::True,
             Sexpr::symbol("b"),
             Sexpr::Float(3.14),
-            Sexpr::quote(Sexpr::symbol("theend")),
         ]);
         let mut iter = list.iter().map(|elem| eval(elem, &mut env));
         assert_eq!(iter.next(), Some(Ok(Sexpr::Integer(1))));
         assert_eq!(iter.next(), Some(Ok(Sexpr::True)));
         assert_eq!(iter.next(), Some(Ok(Sexpr::Integer(2))));
         assert_eq!(iter.next(), Some(Ok(Sexpr::Float(3.14))));
-        assert_eq!(iter.next(), Some(Ok(Sexpr::symbol("theend"))));
         assert_eq!(iter.next(), None);
 
         // didn't mutate
@@ -287,7 +250,6 @@ mod tests {
                 Sexpr::True,
                 Sexpr::symbol("b"),
                 Sexpr::Float(3.14),
-                Sexpr::quote(Sexpr::symbol("theend")),
             ])
         );
     }

@@ -868,10 +868,7 @@ mod tests {
         assert_eval_eq!("(let ((x 1)) (let ((y x)) (+ x y)))", Ok(Sexpr::Integer(2)));
 
         // errors
-        assert_eval_eq!(
-            "(let 'wat '())",
-            Err(Error::WrongArg(Sexpr::quote(Sexpr::symbol("wat"))))
-        );
+        assert_eval_eq!("(let 42 '())", Err(Error::WrongArg(Sexpr::Integer(42))));
         assert_eval_eq!(
             "(let ((x 1) y 2) (+ x y))",
             Err(Error::WrongArg(Sexpr::symbol("y")))

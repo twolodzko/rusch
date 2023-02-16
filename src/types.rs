@@ -13,7 +13,6 @@ pub enum Sexpr {
     Integer(i64),
     Float(f64),
     String(String),
-    Quote(Box<Sexpr>),
     List(List<Sexpr>),
     Func(Func),
     Tco(TcoFunc),
@@ -38,11 +37,6 @@ impl Sexpr {
     #[inline]
     pub fn null() -> Sexpr {
         Sexpr::List(List::empty())
-    }
-
-    #[inline]
-    pub fn quote(sexpr: Sexpr) -> Sexpr {
-        Sexpr::Quote(Box::new(sexpr))
     }
 
     #[inline]
@@ -83,7 +77,6 @@ impl fmt::Display for Sexpr {
             String(ref value) => write!(f, "\"{}\"", value),
             Float(value) => value.fmt(f),
             Integer(value) => value.fmt(f),
-            Quote(ref sexpr) => write!(f, "'{}", sexpr),
             List(ref list) => list.fmt(f),
             Func(ref func) => write!(f, "Func<{:#?}>", *func as usize),
             Tco(ref func) => write!(f, "Func<{:#?}>", *func as usize),
@@ -108,7 +101,6 @@ impl std::cmp::PartialEq for Sexpr {
             (False, False) => true,
             (String(s), String(o)) => s == o,
             (Symbol(s), Symbol(o)) => s == o,
-            (Quote(s), Quote(o)) => s == o,
             // numbers
             (Integer(s), Integer(o)) => s == o,
             (Float(s), Float(o)) => s == o,
@@ -284,11 +276,6 @@ mod tests {
     }
 
     #[test]
-    fn fmt_quote() {
-        assert_fmt_eq!(Sexpr::quote(Sexpr::symbol("foo")), "'foo")
-    }
-
-    #[test]
     fn fmt_integer() {
         assert_fmt_eq!(Sexpr::Integer(42), "42")
     }
@@ -326,10 +313,9 @@ mod tests {
                 Sexpr::Float(-3.14),
                 Sexpr::Integer(42),
                 Sexpr::False,
-                Sexpr::quote(Sexpr::symbol("foo")),
                 Sexpr::null(),
             ]),
-            "(list -3.14 42 #f 'foo ())"
+            "(list -3.14 42 #f ())"
         )
     }
 

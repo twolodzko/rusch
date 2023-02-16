@@ -166,71 +166,47 @@ fn orfn(args: &Args, env: &mut Env) -> FuncResult {
     iter.err().unwrap_or(Ok(Sexpr::False))
 }
 
-fn add(args: &Args, env: &mut Env) -> FuncResult {
+fn list_reduce(
+    args: &Args,
+    env: &mut Env,
+    init: Sexpr,
+    func: impl Fn(Sexpr, Sexpr) -> FuncResult,
+) -> FuncResult {
     let iter = &mut eval_iter(args, env);
-    let mut acc = Sexpr::Integer(0);
+    let mut acc;
+    match iter.next() {
+        Some(sexpr) => {
+            if args.has_next() {
+                acc = sexpr
+            } else {
+                return func(init, sexpr);
+            }
+        }
+        None => return iter.err().unwrap_or(Ok(init)),
+    }
     for elem in &mut *iter {
-        acc = (acc + elem)?;
+        acc = func(acc, elem)?;
     }
     iter.err().unwrap_or(Ok(acc))
+}
+
+fn add(args: &Args, env: &mut Env) -> FuncResult {
+    list_reduce(args, env, Sexpr::Integer(0), |x, y| x + y)
 }
 
 fn sub(args: &Args, env: &mut Env) -> FuncResult {
-    use crate::types::Sexpr::{Float, Integer};
-    let mut iter = args.iter();
-
-    let init = match iter.next() {
-        Some(sexpr) => eval(sexpr, env)?,
-        None => return Ok(Integer(0)),
-    };
-    if !init.is_number() {
-        return Err(Error::NotANumber(init));
-    }
-    if !args.has_next() {
-        return match init {
-            Integer(x) => Ok(Integer(-x)),
-            Float(x) => Ok(Float(-x)),
-            _ => unreachable!(),
-        };
-    }
-
-    let iter = &mut TryIter::new(iter.map(|elem| eval(elem, env)));
-    let mut acc = init;
-    for elem in &mut *iter {
-        acc = (acc - elem)?;
-    }
-    iter.err().unwrap_or(Ok(acc))
+    list_reduce(args, env, Sexpr::Integer(0), |x, y| x - y)
 }
 
 fn mul(args: &Args, env: &mut Env) -> FuncResult {
-    let iter = &mut eval_iter(args, env);
-    let mut acc = Sexpr::Integer(1);
-    for elem in &mut *iter {
-        acc = (acc * elem)?;
-    }
-    iter.err().unwrap_or(Ok(acc))
+    list_reduce(args, env, Sexpr::Integer(1), |x, y| x * y)
 }
 
 fn div(args: &Args, env: &mut Env) -> FuncResult {
-    let mut iter = args.iter();
-
-    let init = match iter.next() {
-        Some(sexpr) => eval(sexpr, env)?,
-        None => return Err(Error::WrongArgNum),
-    };
-    if !init.is_number() {
-        return Err(Error::NotANumber(init));
+    if args.is_empty() {
+        return Err(Error::WrongArgNum);
     }
-    if !args.has_next() {
-        return Sexpr::Float(1.0) / init;
-    }
-
-    let iter = &mut TryIter::new(iter.map(|elem| eval(elem, env)));
-    let mut acc = init;
-    for elem in &mut *iter {
-        acc = (acc / elem)?;
-    }
-    iter.err().unwrap_or(Ok(acc))
+    list_reduce(args, env, Sexpr::Integer(1), |x, y| x / y)
 }
 
 fn equal(args: &Args, env: &mut Env) -> FuncResult {
@@ -683,6 +659,8 @@ mod tests {
         assert_eval_eq!("(+ 2.0   2  )", Ok(Float(4.0)));
 
         // errors
+        assert_eval_eq!("(+ x)", Err(Error::NotFound(String::from("x"))));
+        assert_eval_eq!("(+ 'foo)", Err(Error::NotANumber(Sexpr::symbol("foo"))));
         assert_eval_eq!("(+ 1 'foo)", Err(Error::NotANumber(Sexpr::symbol("foo"))));
         assert_eval_eq!("(+ \"1\" 2 3 4)", Err(Error::NotANumber(Sexpr::from("1"))));
     }
@@ -735,7 +713,6 @@ mod tests {
         use Sexpr::Float;
 
         // basics
-        assert_eval_eq!("(/)", Err(Error::WrongArgNum));
         assert_eval_eq!("(/ 2)", Ok(Float(0.5)));
         assert_eval_eq!("(/ '9 3)", Ok(Float(3.0)));
         assert_eval_eq!("(/ 30 10 3)", Ok(Float(1.0)));
@@ -747,6 +724,7 @@ mod tests {
         assert_eval_eq!("(/ 6.0   3  )", Ok(Float(2.0)));
 
         // errors
+        assert_eval_eq!("(/)", Err(Error::WrongArgNum));
         assert_eval_eq!("(/ 1 'foo)", Err(Error::NotANumber(Sexpr::symbol("foo"))));
         assert_eval_eq!("(/ \"1\" 2 3 4)", Err(Error::NotANumber(Sexpr::from("1"))));
     }

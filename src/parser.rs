@@ -28,6 +28,7 @@ pub fn read_sexpr(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
             skip_line(r)?;
             read_sexpr(r)
         }
+        '`' => unimplemented!(),
         ',' => unimplemented!(),
         _ => {
             let word = read_word(r)?;

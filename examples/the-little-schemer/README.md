@@ -13,30 +13,26 @@ $ hyperfine -m 100 --warmup 10 \
     'loco run-all.scm' \
     '../../rusch run-all.scm'
 Benchmark 1: gosch run-all.scm
-  Time (mean ± σ):      72.4 ms ±   5.1 ms    [User: 83.2 ms, System: 6.6 ms]
-  Range (min … max):    64.3 ms …  93.4 ms    100 runs
+  Time (mean ± σ):      68.8 ms ±   4.5 ms    [User: 84.2 ms, System: 3.5 ms]
+  Range (min … max):    61.8 ms …  78.5 ms    100 runs
  
 Benchmark 2: scheme --quiet < run-all.scm
-  Time (mean ± σ):     212.3 ms ±  15.1 ms    [User: 165.6 ms, System: 46.5 ms]
-  Range (min … max):   202.3 ms … 297.3 ms    100 runs
- 
-  Warning: Statistical outliers were detected. Consider re-running this benchmark on a quiet PC without any interferences from other programs. It might help to use the '--warmup' or '--prepare' options.
+  Time (mean ± σ):     204.9 ms ±   2.2 ms    [User: 161.8 ms, System: 43.1 ms]
+  Range (min … max):   200.2 ms … 214.0 ms    100 runs
  
 Benchmark 3: loco run-all.scm
-  Time (mean ± σ):      18.1 ms ±   0.9 ms    [User: 16.9 ms, System: 1.3 ms]
-  Range (min … max):    17.3 ms …  23.7 ms    127 runs
- 
-  Warning: The first benchmarking run for this command was significantly slower than the rest (22.4 ms). This could be caused by (filesystem) caches that were not filled until after the first run. You should consider using the '--warmup' option to fill those caches before the actual benchmark. Alternatively, use the '--prepare' option to clear the caches before each timing run.
- 
-Benchmark 4: ../../rusch run-all.scm
-  Time (mean ± σ):      20.2 ms ±   1.4 ms    [User: 19.7 ms, System: 0.7 ms]
-  Range (min … max):    19.4 ms …  30.5 ms    142 runs
+  Time (mean ± σ):      15.3 ms ±   5.6 ms    [User: 18.4 ms, System: 0.1 ms]
+  Range (min … max):    13.0 ms …  69.1 ms    138 runs
  
   Warning: Statistical outliers were detected. Consider re-running this benchmark on a quiet PC without any interferences from other programs. It might help to use the '--warmup' or '--prepare' options.
  
+Benchmark 4: ../../rusch run-all.scm
+  Time (mean ± σ):      12.4 ms ±   1.3 ms    [User: 16.6 ms, System: 0.0 ms]
+  Range (min … max):    11.2 ms …  18.5 ms    164 runs
+ 
 Summary
-  'loco run-all.scm' ran
-    1.12 ± 0.09 times faster than '../../rusch run-all.scm'
-    4.01 ± 0.35 times faster than 'gosch run-all.scm'
-   11.75 ± 1.02 times faster than 'scheme --quiet < run-all.scm'
+  '../../rusch run-all.scm' ran
+    1.23 ± 0.47 times faster than 'loco run-all.scm'
+    5.56 ± 0.70 times faster than 'gosch run-all.scm'
+   16.56 ± 1.79 times faster than 'scheme --quiet < run-all.scm'
 ```

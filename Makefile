@@ -29,8 +29,7 @@ benchmark: rusch
 		hyperfine -m 500 --warmup 10 \
 			'../../rusch run-all.scm' \
 			'loco run-all.scm' \
-			'gosch run-all.scm' \
-			'scheme --quiet < run-all.scm'
+			'gosch run-all.scm'
 
 .PHONY: lines
 lines:

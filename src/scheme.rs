@@ -135,7 +135,8 @@ fn not(args: &Args, env: &mut Env) -> FuncResult {
     if args.is_empty() {
         return Ok(Sexpr::False);
     }
-    Ok(Sexpr::from(!eval_one_arg(args, env)?.is_true()))
+    let result = eval_one_arg(args, env)?;
+    Ok(Sexpr::from(!result.is_true()))
 }
 
 fn andfn(args: &Args, env: &mut Env) -> FuncResult {
@@ -369,18 +370,34 @@ fn eval_and_bind(args: &Args, eval_env: &mut Env, save_env: &mut Env) -> FuncRes
 fn let_impl(args: &Args, call_env: &mut Env, eval_env: &mut Env) -> TcoResult {
     match args.head() {
         Some(Sexpr::List(ref list)) => {
+            let mut err = Ok(());
             list.iter()
                 .map(|elem| match elem {
                     Sexpr::List(ref binding) => eval_and_bind(binding, call_env, eval_env),
                     sexpr => Err(Error::WrongArg(sexpr.clone())),
                 })
-                .collect::<Result<Vec<_>, Error<Sexpr>>>()?;
+                .scan(&mut err, until_err)
+                // to consume the iterator: https://github.com/rust-lang/rust/issues/64117
+                .for_each(drop);
+            err?;
         }
         Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
         None => return Err(Error::WrongArgNum),
     }
 
     eval_but_last(&args.tail().unwrap_or_default(), eval_env)
+}
+
+// See: https://stackoverflow.com/a/63120052/3986320
+#[inline]
+fn until_err<T, E>(err: &mut &mut Result<(), E>, item: Result<T, E>) -> Option<T> {
+    match item {
+        Ok(item) => Some(item),
+        Err(e) => {
+            **err = Err(e);
+            None
+        }
+    }
 }
 
 fn let_core(args: &Args, env: &mut Env) -> TcoResult {

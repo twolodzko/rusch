@@ -409,6 +409,7 @@ mod tests {
         let first = Sexpr::Func(|_, _| Ok(Sexpr::True));
         let second = Sexpr::Func(|_, _| Ok(Sexpr::False));
         assert!(first == first);
+        assert!(first == first.clone());
         assert!(second == second);
         assert!(first != second);
         assert!(first != Sexpr::True);

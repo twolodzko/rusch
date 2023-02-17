@@ -20,7 +20,7 @@ pub fn root_env() -> Env {
         ("=", Func(equal)),
         (">", Func(gt)),
         ("and", Func(andfn)),
-        ("begin", Tco(begin)),
+        ("begin", Tco(eval_but_last)),
         ("bool?", Func(is_bool)),
         ("car", Func(car)),
         ("cdr", Func(cdr)),
@@ -116,10 +116,6 @@ fn list(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
     let list: Result<List<Sexpr>, Error<Sexpr>> = iter.collect();
     Ok(Sexpr::List(list?))
-}
-
-fn begin(args: &Args, env: &mut Env) -> TcoResult {
-    eval_but_last(args, env)
 }
 
 fn lambda(args: &Args, env: &mut Env) -> FuncResult {

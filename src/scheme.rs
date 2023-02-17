@@ -163,6 +163,7 @@ fn orfn(args: &Args, env: &mut Env) -> FuncResult {
     Ok(Sexpr::False)
 }
 
+#[inline]
 fn list_reduce(
     args: &Args,
     env: &mut Env,
@@ -290,30 +291,37 @@ fn condfn(args: &Args, env: &mut Env) -> TcoResult {
 }
 
 fn define(args: &Args, env: &mut Env) -> FuncResult {
-    let expr = args.tail().ok_or(Error::WrongArgNum)?;
-    match args.head() {
-        Some(Sexpr::Symbol(key)) => {
-            if expr.has_next() {
-                return Err(Error::WrongArgNum);
-            }
-            let sexpr = expr.head().unwrap();
-            let val = eval(sexpr, env)?;
-            env.insert(key, val);
+    #[inline]
+    fn from_symbol(key: &String, rhs: &List<Sexpr>, env: &mut Env) -> FuncResult {
+        if rhs.has_next() {
+            return Err(Error::WrongArgNum);
         }
-        Some(Sexpr::List(list)) => {
-            let name = match list.head() {
-                Some(Sexpr::Symbol(name)) => name,
-                Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
-                None => return Err(Error::WrongArgNum),
-            };
-            let vars = list.tail().unwrap_or_default();
-            let lambda = Lambda::from(&vars, &expr, env)?;
-            env.insert(name, lambda)
-        }
-        Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
-        None => return Err(Error::WrongArgNum),
+        let sexpr = rhs.head().unwrap();
+        let val = eval(sexpr, env)?;
+        env.insert(key, val);
+        Ok(Sexpr::Nil)
     }
-    Ok(Sexpr::Nil)
+
+    #[inline]
+    fn from_list(list: &List<Sexpr>, rhs: &List<Sexpr>, env: &mut Env) -> FuncResult {
+        let key = match list.head() {
+            Some(Sexpr::Symbol(name)) => name,
+            Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
+            None => return Err(Error::WrongArgNum),
+        };
+        let vars = list.tail().unwrap_or_default();
+        let lambda = Lambda::from(&vars, rhs, env)?;
+        env.insert(key, lambda);
+        Ok(Sexpr::Nil)
+    }
+
+    let rhs = args.tail().ok_or(Error::WrongArgNum)?;
+    match args.head() {
+        Some(Sexpr::Symbol(key)) => from_symbol(key, &rhs, env),
+        Some(Sexpr::List(list)) => from_list(list, &rhs, env),
+        Some(sexpr) => Err(Error::WrongArg(sexpr.clone())),
+        None => Err(Error::WrongArgNum),
+    }
 }
 
 fn set(args: &Args, env: &mut Env) -> FuncResult {

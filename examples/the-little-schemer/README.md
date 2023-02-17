@@ -7,7 +7,7 @@ I used this code to run a benchmark against MIT Scheme, my implementation of Sch
 and [OCaml (`loco`)](https://github.com/twolodzko/loco).
 
 ```shell
-$ hyperfine -m 100 --warmup 10 \
+$ hyperfine -m 500 --warmup 10 \
     '../../rusch run-all.scm' \
     'loco run-all.scm' \
     'gosch run-all.scm' \

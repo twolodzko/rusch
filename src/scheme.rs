@@ -1171,11 +1171,8 @@ mod tests {
 
     #[test]
     fn to_error() {
-        assert_eval_eq!("(error)", Err(Error::Custom(String::from(""))));
-        assert_eval_eq!(
-            "(error 'hello 'world)",
-            Err(Error::Custom(String::from("hello world")))
-        );
+        assert_eval_eq!("(error)", Err(Error::from("")));
+        assert_eval_eq!("(error 'hello 'world)", Err(Error::from("hello world")));
     }
 
     #[test]
@@ -1196,7 +1193,7 @@ mod tests {
                 "(begin (/ 70 5) (error 'expected) (define dont #f) (+ 2 2))",
                 root
             ),
-            Err(Error::Custom(String::from("expected")))
+            Err(Error::from("expected"))
         );
         assert_eq!(root.get(&String::from("dont")), None);
     }

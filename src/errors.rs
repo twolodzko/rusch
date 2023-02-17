@@ -12,6 +12,12 @@ pub enum Error<T> {
     ReadError(String),
 }
 
+impl<T> Error<T> {
+    pub fn from(msg: &str) -> Self {
+        Error::Custom(String::from(msg))
+    }
+}
+
 impl<T> fmt::Display for Error<T>
 where
     T: fmt::Display,

@@ -93,7 +93,7 @@ impl Lambda {
 
 #[cfg(test)]
 mod tests {
-    use super::{eval, Error};
+    use super::{eval, eval_but_last, Error};
     use crate::envir;
     use crate::list::List;
     use crate::types::Sexpr;
@@ -218,5 +218,41 @@ mod tests {
                 Sexpr::Float(3.14),
             ])
         );
+    }
+
+    #[test]
+    fn test_eval_but_last() {
+        let env = envir::Env::new();
+
+        let not_eval = Sexpr::Func(|_, _| Err(Error::from("invalid")));
+
+        // returns last value unevaluated
+        assert_eq!(
+            eval_but_last(
+                &List::from(vec![
+                    Sexpr::Integer(1),
+                    Sexpr::Integer(2),
+                    Sexpr::from(vec![not_eval.clone()])
+                ]),
+                &mut env.clone()
+            ),
+            Ok((Sexpr::from(vec![not_eval.clone()]), Some(env.clone())))
+        );
+
+        let eval_me = Sexpr::Func(|_, _| Err(Error::from("expected error")));
+
+        // stops early on error
+        assert_eq!(
+            eval_but_last(
+                &List::from(vec![
+                    Sexpr::Integer(1),
+                    Sexpr::Integer(2),
+                    Sexpr::from(vec![eval_me]),
+                    Sexpr::from(vec![not_eval])
+                ]),
+                &mut env.clone()
+            ),
+            Err(Error::from("expected error"))
+        )
     }
 }

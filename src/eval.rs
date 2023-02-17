@@ -3,7 +3,7 @@ use crate::errors::{Error, ReadError};
 use crate::io::FileReader;
 use crate::list::List;
 use crate::parser::read_sexpr;
-use crate::types::{FuncResult, Lambda, Sexpr, TcoResult};
+use crate::types::{Lambda, Sexpr, TcoResult};
 
 type EvalResult = Result<Sexpr, Error<Sexpr>>;
 type Env = envir::Env<Sexpr>;
@@ -29,7 +29,7 @@ pub fn eval(sexpr: &Sexpr, env: &mut Env) -> EvalResult {
 #[inline]
 fn eval_list(list: &List<Sexpr>, env: &mut Env) -> TcoResult {
     let head = match list.head() {
-        Some(list) => list,
+        Some(head) => head,
         None => return Ok((Sexpr::null(), None)),
     };
     let args = list.tail().unwrap_or_default();
@@ -48,10 +48,7 @@ fn eval_list(list: &List<Sexpr>, env: &mut Env) -> TcoResult {
 #[inline]
 pub fn eval_but_last(args: &List<Sexpr>, env: &mut Env) -> TcoResult {
     let iter = &mut args.iter();
-    let mut last = match iter.next() {
-        Some(sexpr) => sexpr,
-        None => return Ok((Sexpr::Nil, None)),
-    };
+    let mut last = iter.next().unwrap_or(&Sexpr::Nil);
     for elem in iter {
         eval(last, env)?;
         last = elem;
@@ -74,17 +71,6 @@ pub fn eval_file(filename: &str, env: &mut Env) -> EvalResult {
 }
 
 impl Lambda {
-    pub fn from(vars: &List<Sexpr>, body: &List<Sexpr>, env: &mut Env) -> FuncResult {
-        let vars: Result<Vec<String>, Error<Sexpr>> = vars
-            .iter()
-            .map(|elem| match elem {
-                Sexpr::Symbol(name) => Ok(name.clone()),
-                sexpr => Err(Error::WrongArg(sexpr.clone())),
-            })
-            .collect();
-        Ok(Sexpr::lambda(vars?, body.clone(), env.clone()))
-    }
-
     fn call(&self, args: &List<Sexpr>, env: &mut Env) -> TcoResult {
         let local = &mut self.env.branch();
         let vars = &mut self.vars.iter();

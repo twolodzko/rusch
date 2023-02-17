@@ -2,7 +2,7 @@ use crate::envir;
 use crate::errors::Error;
 use crate::eval::{eval, eval_but_last, eval_file};
 use crate::list::List;
-use crate::types::{FuncResult, Lambda, Sexpr, TcoResult};
+use crate::types::{FuncResult, Sexpr, TcoResult};
 
 type Args = List<Sexpr>;
 type Env = envir::Env<Sexpr>;
@@ -123,12 +123,26 @@ fn begin(args: &Args, env: &mut Env) -> TcoResult {
 }
 
 fn lambda(args: &Args, env: &mut Env) -> FuncResult {
-    let body = args.tail().unwrap_or_default();
     match args.head() {
-        Some(Sexpr::List(ref vars)) => Lambda::from(vars, &body, env),
+        Some(Sexpr::List(ref vars)) => {
+            let body = args.tail().unwrap_or_default();
+            lambda_init(vars, &body, env)
+        }
         Some(sexpr) => Err(Error::WrongArg(sexpr.clone())),
         None => Err(Error::WrongArgNum),
     }
+}
+
+#[inline]
+fn lambda_init(vars: &List<Sexpr>, body: &List<Sexpr>, env: &mut Env) -> FuncResult {
+    let vars: Result<Vec<String>, Error<Sexpr>> = vars
+        .iter()
+        .map(|elem| match elem {
+            Sexpr::Symbol(name) => Ok(name.clone()),
+            sexpr => Err(Error::WrongArg(sexpr.clone())),
+        })
+        .collect();
+    Ok(Sexpr::lambda(vars?, body.clone(), env.clone()))
 }
 
 fn not(args: &Args, env: &mut Env) -> FuncResult {
@@ -310,7 +324,7 @@ fn define(args: &Args, env: &mut Env) -> FuncResult {
             None => return Err(Error::WrongArgNum),
         };
         let vars = list.tail().unwrap_or_default();
-        let lambda = Lambda::from(&vars, rhs, env)?;
+        let lambda = lambda_init(&vars, rhs, env)?;
         env.insert(key, lambda);
         Ok(Sexpr::Nil)
     }
@@ -561,13 +575,13 @@ fn eval_iter<'a>(args: &'a List<Sexpr>, env: &'a mut Env) -> impl Iterator<Item 
 
 #[cfg(test)]
 mod tests {
-    use super::root_env;
+    use super::{lambda_init, root_env};
     use crate::errors::Error;
     use crate::eval::eval;
     use crate::list::List;
     use crate::parser::read_sexpr;
     use crate::reader::StringReader;
-    use crate::types::{Lambda, Sexpr};
+    use crate::types::Sexpr;
 
     #[macro_export]
     macro_rules! parse_eval {
@@ -882,14 +896,14 @@ mod tests {
         assert!(parse_eval!("(define (yes) #t)", &mut env).is_ok());
         assert_eq!(
             env.get(&String::from("yes")),
-            Some(Lambda::from(&List::empty(), &List::from(vec![Sexpr::True]), &mut env).unwrap())
+            Some(lambda_init(&List::empty(), &List::from(vec![Sexpr::True]), &mut env).unwrap())
         );
 
         assert!(parse_eval!("(define (add1 x) (+ x 1))", &mut env).is_ok());
         assert_eq!(
             env.get(&String::from("add1")),
             Some(
-                Lambda::from(
+                lambda_init(
                     &List::from(vec![Sexpr::symbol("x")]),
                     &List::from(vec![Sexpr::List(List::from(vec![
                         Sexpr::symbol("+"),
@@ -906,7 +920,7 @@ mod tests {
         assert_eq!(
             env.get(&String::from("foo")),
             Some(
-                Lambda::from(
+                lambda_init(
                     &List::from(vec![Sexpr::symbol("x"), Sexpr::symbol("y")]),
                     &List::from(vec![
                         Sexpr::from(vec![

@@ -214,11 +214,10 @@ fn equal(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
     let mut result = Sexpr::True;
 
-    let mut prev;
-    match iter.next() {
-        Some(sexpr) => prev = sexpr?,
+    let mut prev = match iter.next() {
+        Some(sexpr) => sexpr?,
         None => return Ok(result),
-    }
+    };
 
     for elem in &mut *iter {
         let elem = elem?;

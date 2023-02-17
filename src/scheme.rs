@@ -105,7 +105,7 @@ fn cons(args: &Args, env: &mut Env) -> FuncResult {
         return Err(Error::WrongArgNum);
     }
 
-    let list = match rhs.ok_or(Error::WrongArgNum)?? {
+    let list = match rhs.unwrap_or(Err(Error::WrongArgNum))? {
         Sexpr::List(list) => list,
         sexpr => List::from(sexpr),
     };
@@ -212,11 +212,12 @@ fn equal(args: &Args, env: &mut Env) -> FuncResult {
     }
 
     for elem in &mut *iter {
-        if elem.clone()? != prev {
+        let elem = elem?;
+        if elem != prev {
             result = Sexpr::False;
             break;
         }
-        prev = elem?;
+        prev = elem;
     }
     Ok(result)
 }
@@ -232,13 +233,14 @@ fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
     };
 
     for elem in &mut *iter {
-        match prev.partial_cmp(&elem.clone()?) {
-            Some(cmp) if cmp == order => prev = elem?,
+        let elem = elem?;
+        match prev.partial_cmp(&elem) {
+            Some(cmp) if cmp == order => prev = elem,
             Some(_) => {
                 result = Sexpr::False;
                 break;
             }
-            None => return Err(Error::NotANumber(elem?)),
+            None => return Err(Error::NotANumber(elem)),
         };
     }
     Ok(result)

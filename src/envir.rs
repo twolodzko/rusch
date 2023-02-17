@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Env<T>(Option<Rc<RefCell<EnvContainer<T>>>>);
 
 #[derive(Debug, PartialEq)]
@@ -93,6 +93,19 @@ where
 {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// it is needed because otherwise we could be doing
+// infinitelly recursive comparisons when
+// object in Env holds clone of the Env itself
+impl<T> PartialEq for Env<T> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Env(Some(s)), Env(Some(o))) => Rc::ptr_eq(s, o),
+            (Env(None), Env(None)) => true,
+            (_, _) => false,
+        }
     }
 }
 

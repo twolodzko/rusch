@@ -72,10 +72,8 @@ pub fn return_last(args: &List<Sexpr>, env: &mut Env) -> TcoResult {
 }
 
 pub fn eval_file(filename: &str, env: &mut Env) -> EvalResult {
-    let mut reader = match FileReader::from(filename) {
-        Ok(reader) => reader,
-        Err(msg) => return Err(Error::ReadError(msg.to_string())),
-    };
+    let mut reader =
+        FileReader::from(filename).or_else(|msg| Err(Error::ReadError(msg.to_string())))?;
 
     let mut last = Sexpr::Nil;
     loop {

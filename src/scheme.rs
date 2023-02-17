@@ -70,10 +70,8 @@ fn eval_one_arg(args: &Args, env: &mut Env) -> FuncResult {
     if args.has_next() {
         return Err(Error::WrongArgNum);
     }
-    match args.head() {
-        Some(sexpr) => eval(sexpr, env),
-        None => Err(Error::WrongArgNum),
-    }
+    let sexpr = args.head().ok_or(Error::WrongArgNum)?;
+    eval(sexpr, env)
 }
 
 fn car(args: &Args, env: &mut Env) -> FuncResult {
@@ -262,13 +260,9 @@ fn lt(args: &Args, env: &mut Env) -> FuncResult {
 
 fn iffn(args: &Args, env: &mut Env) -> TcoResult {
     let mut iter = args.iter();
-    match iter.next() {
-        Some(sexpr) => {
-            if !eval(sexpr, env)?.is_true() {
-                iter.next();
-            }
-        }
-        None => return Err(Error::WrongArgNum),
+    let sexpr = iter.next().ok_or(Error::WrongArgNum)?;
+    if !eval(sexpr, env)?.is_true() {
+        iter.next();
     }
     match iter.next() {
         Some(sexpr) => Ok((sexpr.clone(), Some(env.clone()))),
@@ -278,52 +272,47 @@ fn iffn(args: &Args, env: &mut Env) -> TcoResult {
 
 fn condfn(args: &Args, env: &mut Env) -> TcoResult {
     for branch in args.iter() {
-        match branch {
-            Sexpr::List(list) => match list.head() {
-                Some(sexpr) => {
-                    let condition = eval(sexpr, env)?;
-                    if condition.is_true() {
-                        match list.tail() {
-                            Some(ref body) => return return_last(body, env),
-                            None => return Ok((condition, None)),
-                        }
-                    }
-                }
-                None => return Err(Error::WrongArgNum),
-            },
+        let list = match branch {
+            Sexpr::List(list) => list,
             sexpr => return Err(Error::WrongArg(sexpr.clone())),
+        };
+        let sexpr = list.head().ok_or(Error::WrongArgNum)?;
+        let condition = eval(sexpr, env)?;
+        if condition.is_true() {
+            match list.tail() {
+                Some(ref body) => return return_last(body, env),
+                None => return Ok((condition, None)),
+            }
         }
     }
     Ok((Sexpr::Nil, None))
 }
 
-#[inline]
-fn eval_and_bind(args: &Args, eval_env: &mut Env, save_env: &mut Env) -> FuncResult {
-    let mut iter = args.iter();
-
-    let key = match iter.next() {
-        Some(Sexpr::Symbol(name)) => name,
-        Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
-        None => return Err(Error::WrongArgNum),
-    };
-
-    match iter.next() {
-        Some(sexpr) => {
-            if iter.next().is_some() {
-                // has third arg
+fn define(args: &Args, env: &mut Env) -> FuncResult {
+    let expr = args.tail().ok_or(Error::WrongArgNum)?;
+    match args.head() {
+        Some(Sexpr::Symbol(key)) => {
+            if expr.has_next() {
                 return Err(Error::WrongArgNum);
             }
-            let val = eval(sexpr, eval_env)?;
-            save_env.insert(key, val);
-            Ok(Sexpr::Nil)
+            let sexpr = expr.head().unwrap();
+            let val = eval(sexpr, env)?;
+            env.insert(key, val);
         }
-        // missing second arg
-        None => Err(Error::WrongArgNum),
+        Some(Sexpr::List(list)) => {
+            let name = match list.head() {
+                Some(Sexpr::Symbol(name)) => name,
+                Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
+                None => return Err(Error::WrongArgNum),
+            };
+            let vars = list.tail().unwrap_or_default();
+            let lambda = Lambda::from(&vars, &expr, env)?;
+            env.insert(name, lambda)
+        }
+        Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
+        None => return Err(Error::WrongArgNum),
     }
-}
-
-fn define(args: &Args, env: &mut Env) -> FuncResult {
-    eval_and_bind(args, &mut env.clone(), &mut env.clone())
+    Ok(Sexpr::Nil)
 }
 
 fn set(args: &Args, env: &mut Env) -> FuncResult {
@@ -352,6 +341,28 @@ fn set(args: &Args, env: &mut Env) -> FuncResult {
         }
         None => Err(Error::NotFound(key.clone())),
     }
+}
+
+#[inline]
+fn eval_and_bind(args: &Args, eval_env: &mut Env, save_env: &mut Env) -> FuncResult {
+    let mut iter = args.iter();
+
+    let key = match iter.next() {
+        Some(Sexpr::Symbol(name)) => name,
+        Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
+        None => return Err(Error::WrongArgNum),
+    };
+
+    let sexpr = iter.next().ok_or(Error::WrongArgNum)?;
+
+    if iter.next().is_some() {
+        // has third arg
+        return Err(Error::WrongArgNum);
+    }
+
+    let val = eval(sexpr, eval_env)?;
+    save_env.insert(key, val);
+    Ok(Sexpr::Nil)
 }
 
 #[inline]
@@ -503,10 +514,8 @@ fn evalfn(args: &Args, env: &mut Env) -> FuncResult {
     if args.has_next() {
         return Err(Error::WrongArgNum);
     }
-    match args.head() {
-        Some(sexpr) => eval(&eval(sexpr, env)?, env),
-        None => Err(Error::WrongArgNum),
-    }
+    let sexpr = args.head().ok_or(Error::WrongArgNum)?;
+    eval(&eval(sexpr, env)?, env)
 }
 
 fn load(args: &Args, env: &mut Env) -> FuncResult {
@@ -531,9 +540,10 @@ mod tests {
     use super::root_env;
     use crate::errors::Error;
     use crate::eval::eval;
+    use crate::list::List;
     use crate::parser::read_sexpr;
     use crate::reader::StringReader;
-    use crate::types::Sexpr;
+    use crate::types::{Lambda, Sexpr};
 
     #[macro_export]
     macro_rules! parse_eval {
@@ -833,10 +843,79 @@ mod tests {
             parse_eval!("(define \"x\" 'foo)", &mut env),
             Err(Error::WrongArg(Sexpr::from("x")))
         );
+        assert_eq!(parse_eval!("(define)", &mut env), Err(Error::WrongArgNum));
         assert_eq!(parse_eval!("(define x)", &mut env), Err(Error::WrongArgNum));
         assert_eq!(
             parse_eval!("(define x 'foo 'bar)", &mut env),
             Err(Error::WrongArgNum)
+        );
+    }
+
+    #[test]
+    fn define_function() {
+        let mut env = root_env();
+
+        assert!(parse_eval!("(define (yes) #t)", &mut env).is_ok());
+        assert_eq!(
+            env.get(&String::from("yes")),
+            Some(Lambda::from(&List::empty(), &List::from(vec![Sexpr::True]), &mut env).unwrap())
+        );
+
+        assert!(parse_eval!("(define (add1 x) (+ x 1))", &mut env).is_ok());
+        assert_eq!(
+            env.get(&String::from("add1")),
+            Some(
+                Lambda::from(
+                    &List::from(vec![Sexpr::symbol("x")]),
+                    &List::from(vec![Sexpr::List(List::from(vec![
+                        Sexpr::symbol("+"),
+                        Sexpr::symbol("x"),
+                        Sexpr::Integer(1),
+                    ]))]),
+                    &mut env
+                )
+                .unwrap()
+            )
+        );
+
+        assert!(parse_eval!("(define (foo x y) (display x '+ y '=) (+ x y))", &mut env).is_ok());
+        assert_eq!(
+            env.get(&String::from("foo")),
+            Some(
+                Lambda::from(
+                    &List::from(vec![Sexpr::symbol("x"), Sexpr::symbol("y")]),
+                    &List::from(vec![
+                        Sexpr::from(vec![
+                            Sexpr::symbol("display"),
+                            Sexpr::symbol("x"),
+                            Sexpr::from(vec![Sexpr::symbol("quote"), Sexpr::symbol("+")]),
+                            Sexpr::symbol("y"),
+                            Sexpr::from(vec![Sexpr::symbol("quote"), Sexpr::symbol("=")]),
+                        ]),
+                        Sexpr::from(vec![
+                            Sexpr::symbol("+"),
+                            Sexpr::symbol("x"),
+                            Sexpr::symbol("y")
+                        ])
+                    ]),
+                    &mut env
+                )
+                .unwrap()
+            )
+        );
+
+        // errors
+        assert_eq!(
+            parse_eval!("(define ())", &mut env),
+            Err(Error::WrongArgNum)
+        );
+        assert_eq!(
+            parse_eval!("(define (foo))", &mut env),
+            Err(Error::WrongArgNum)
+        );
+        assert_eq!(
+            parse_eval!("(define (#t) #f)", &mut env),
+            Err(Error::WrongArg(Sexpr::True))
         );
     }
 

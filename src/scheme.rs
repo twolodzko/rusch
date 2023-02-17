@@ -555,10 +555,7 @@ fn load(args: &Args, env: &mut Env) -> FuncResult {
 }
 
 #[inline]
-pub fn eval_iter<'a>(
-    args: &'a List<Sexpr>,
-    env: &'a mut Env,
-) -> impl Iterator<Item = FuncResult> + 'a {
+fn eval_iter<'a>(args: &'a List<Sexpr>, env: &'a mut Env) -> impl Iterator<Item = FuncResult> + 'a {
     args.iter().map(|elem| eval(elem, env))
 }
 

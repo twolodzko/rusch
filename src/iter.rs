@@ -1,12 +1,14 @@
+use std::marker::PhantomData;
+
 /// Try to iterate through all the elements, stop on error, otherwise unwrap the element
 pub struct TryIter<I, T, E> {
-    pub iter: I,
-    pub err: Option<Result<T, E>>,
+    iter: I,
+    err: Result<(), E>,
+    _phantom: PhantomData<T>,
 }
 
 impl<I, T, E> TryIter<I, T, E>
 where
-    T: Clone,
     E: Clone,
 {
     #[inline]
@@ -14,11 +16,15 @@ where
     where
         I: Iterator<Item = Result<T, E>>,
     {
-        TryIter { iter, err: None }
+        TryIter {
+            iter,
+            err: Ok(()),
+            _phantom: PhantomData,
+        }
     }
 
     #[inline]
-    pub fn err(&self) -> Option<Result<T, E>> {
+    pub fn err(&self) -> Result<(), E> {
         self.err.clone()
     }
 }
@@ -27,11 +33,11 @@ impl<I: Iterator<Item = Result<T, E>>, T, E> Iterator for TryIter<I, T, E> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        debug_assert!(self.err.is_none()); // we should not need to check it in runtime
+        debug_assert!(self.err.is_ok()); // not need to check it in runtime
         match self.iter.next()? {
             Ok(result) => Some(result),
-            err => {
-                self.err = Some(err);
+            Err(err) => {
+                self.err = Err(err);
                 None
             }
         }

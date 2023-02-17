@@ -101,12 +101,12 @@ fn cons(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
     let lhs = iter.next();
     let rhs = iter.next();
-    if let Some(err) = iter.err() {
-        return err;
-    }
+
+    iter.err()?;
     if iter.next().is_some() {
         return Err(Error::WrongArgNum);
     }
+
     let list = match rhs {
         Some(Sexpr::List(list)) => list,
         Some(sexpr) => List::from(sexpr),
@@ -118,10 +118,7 @@ fn cons(args: &Args, env: &mut Env) -> FuncResult {
 fn list(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
     let list: List<Sexpr> = iter.collect();
-    match iter.err() {
-        Some(Err(msg)) => Err(msg),
-        _ => Ok(Sexpr::List(list)),
-    }
+    iter.err().and(Ok(Sexpr::List(list)))
 }
 
 fn begin(args: &Args, env: &mut Env) -> TcoResult {
@@ -148,20 +145,20 @@ fn andfn(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
     for elem in &mut *iter {
         if !elem.is_true() {
-            return iter.err().unwrap_or(Ok(Sexpr::False));
+            return iter.err().and(Ok(Sexpr::False));
         }
     }
-    iter.err().unwrap_or(Ok(Sexpr::True))
+    iter.err().and(Ok(Sexpr::True))
 }
 
 fn orfn(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
     for elem in &mut *iter {
         if elem.is_true() {
-            return iter.err().unwrap_or(Ok(Sexpr::True));
+            return iter.err().and(Ok(Sexpr::True));
         }
     }
-    iter.err().unwrap_or(Ok(Sexpr::False))
+    iter.err().and(Ok(Sexpr::False))
 }
 
 fn list_reduce(
@@ -180,12 +177,12 @@ fn list_reduce(
                 return func(init, sexpr);
             }
         }
-        None => return iter.err().unwrap_or(Ok(init)),
+        None => return iter.err().and(Ok(init)),
     }
     for elem in &mut *iter {
         acc = func(acc, elem)?;
     }
-    iter.err().unwrap_or(Ok(acc))
+    iter.err().and(Ok(acc))
 }
 
 fn add(args: &Args, env: &mut Env) -> FuncResult {
@@ -224,7 +221,7 @@ fn equal(args: &Args, env: &mut Env) -> FuncResult {
         }
         prev = elem;
     }
-    iter.err().unwrap_or(Ok(result))
+    iter.err().and(Ok(result))
 }
 
 #[inline]
@@ -247,7 +244,7 @@ fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
             None => return Err(Error::NotANumber(elem)),
         };
     }
-    iter.err().unwrap_or(Ok(result))
+    iter.err().and(Ok(result))
 }
 
 fn gt(args: &Args, env: &mut Env) -> FuncResult {
@@ -374,9 +371,7 @@ fn let_impl(args: &Args, call_env: &mut Env, eval_env: &mut Env) -> TcoResult {
                 sexpr => Err(Error::WrongArg(sexpr.clone())),
             }));
             iter.last(); // iterate through all the elements
-            if let Some(Err(msg)) = iter.err() {
-                return Err(msg);
-            }
+            iter.err()?;
         }
         Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
         None => return Err(Error::WrongArgNum),
@@ -491,9 +486,7 @@ fn stringify(args: &Args, env: &mut Env) -> Result<String, Error<Sexpr>> {
         .map(|elem| elem.to_string())
         .collect::<Vec<String>>()
         .join(" ");
-    if let Some(Err(err)) = iter.err() {
-        return Err(err);
-    }
+    iter.err()?;
     Ok(string)
 }
 

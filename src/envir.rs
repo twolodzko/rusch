@@ -177,4 +177,27 @@ mod tests {
         assert_eq!(env.get(&String::from("baz")), Some(Sexpr::True));
         assert_eq!(env.get(&String::from("WRONG")), None);
     }
+
+    #[test]
+    fn clones_are_equal() {
+        let env = Env::from([
+            ("foo", Sexpr::Integer(1)),
+            ("bar", Sexpr::symbol("hello")),
+            ("baz", Sexpr::True),
+        ]);
+        let clone = env.clone();
+        assert!(env == clone);
+
+        let branch = env.branch();
+        assert!(env != branch);
+
+        let similar = Env::from([
+            ("foo", Sexpr::Integer(1)),
+            ("bar", Sexpr::symbol("hello")),
+            ("baz", Sexpr::True),
+        ]);
+        assert!(env != similar);
+
+        assert!(Env::<i32>::new() != Env::<i32>::new());
+    }
 }

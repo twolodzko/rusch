@@ -50,10 +50,7 @@ pub fn eval_iter<'a>(
     sexprs: &'a List<Sexpr>,
     env: &'a mut Env,
 ) -> TryIter<impl Iterator<Item = FuncResult> + 'a, Sexpr, Error<Sexpr>> {
-    TryIter {
-        iter: sexprs.iter().map(|elem| eval(elem, env)),
-        err: None,
-    }
+    TryIter::new(sexprs.iter().map(|elem| eval(elem, env)))
 }
 
 /// Evaluate all the elements of the list but last, return last element unevaluated
@@ -72,8 +69,7 @@ pub fn return_last(args: &List<Sexpr>, env: &mut Env) -> TcoResult {
 }
 
 pub fn eval_file(filename: &str, env: &mut Env) -> EvalResult {
-    let mut reader =
-        FileReader::from(filename).or_else(|msg| Err(Error::ReadError(msg.to_string())))?;
+    let mut reader = FileReader::from(filename).map_err(|msg| Error::ReadError(msg.to_string()))?;
 
     let mut last = Sexpr::Nil;
     loop {
@@ -93,9 +89,7 @@ impl Lambda {
             sexpr => Err(Error::WrongArg(sexpr.clone())),
         }));
         let vars: Vec<String> = iter.cloned().collect();
-        if let Some(Err(err)) = iter.err() {
-            return Err(err);
-        }
+        iter.err()?;
         Ok(Sexpr::Lambda(Box::new(Lambda {
             vars,
             body: body.clone(),

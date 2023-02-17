@@ -44,14 +44,6 @@ fn eval_list(list: &List<Sexpr>, env: &mut Env) -> TcoResult {
     }
 }
 
-#[inline]
-pub fn eval_iter<'a>(
-    args: &'a List<Sexpr>,
-    env: &'a mut Env,
-) -> impl Iterator<Item = FuncResult> + 'a {
-    args.iter().map(|elem| eval(elem, env))
-}
-
 /// Evaluate all the elements of the list but last, return last element unevaluated
 #[inline]
 pub fn eval_but_last(args: &List<Sexpr>, env: &mut Env) -> TcoResult {
@@ -90,11 +82,7 @@ impl Lambda {
                 sexpr => Err(Error::WrongArg(sexpr.clone())),
             })
             .collect();
-        Ok(Sexpr::Lambda(Box::new(Lambda {
-            vars: vars?,
-            body: body.clone(),
-            env: env.clone(),
-        })))
+        Ok(Sexpr::lambda(vars?, body.clone(), env.clone()))
     }
 
     fn call(&self, args: &List<Sexpr>, env: &mut Env) -> TcoResult {

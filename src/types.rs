@@ -45,6 +45,11 @@ impl Sexpr {
     }
 
     #[inline]
+    pub fn lambda(vars: Vec<String>, body: List<Sexpr>, env: Env<Sexpr>) -> Self {
+        Sexpr::Lambda(Box::new(Lambda { vars, body, env }))
+    }
+
+    #[inline]
     pub fn is_true(&self) -> bool {
         // see: https://www.scheme.com/tspl4/intro.html#./intro:s36
         !matches!(self, Sexpr::False)

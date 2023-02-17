@@ -12,10 +12,7 @@ pub struct FileReader {
 
 impl FileReader {
     pub fn from(filename: &str) -> Result<Self, ReadError> {
-        let file = match File::open(filename) {
-            Ok(handler) => handler,
-            Err(msg) => return Err(ReadError::IoError(msg.to_string())),
-        };
+        let file = File::open(filename).map_err(|msg| ReadError::IoError(msg.to_string()))?;
         let mut lines = BufReader::new(file).lines();
         let iter = FileReader::next_line(&mut lines)?;
         Ok(FileReader { lines, iter })

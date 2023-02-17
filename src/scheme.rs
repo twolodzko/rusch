@@ -1,6 +1,6 @@
 use crate::envir;
 use crate::errors::Error;
-use crate::eval::{eval, eval_but_last, eval_file, eval_iter};
+use crate::eval::{eval, eval_but_last, eval_file};
 use crate::list::List;
 use crate::types::{FuncResult, Lambda, Sexpr, TcoResult};
 
@@ -552,6 +552,14 @@ fn load(args: &Args, env: &mut Env) -> FuncResult {
         }
     }
     Ok(last)
+}
+
+#[inline]
+pub fn eval_iter<'a>(
+    args: &'a List<Sexpr>,
+    env: &'a mut Env,
+) -> impl Iterator<Item = FuncResult> + 'a {
+    args.iter().map(|elem| eval(elem, env))
 }
 
 #[cfg(test)]

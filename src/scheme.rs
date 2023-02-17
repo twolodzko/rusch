@@ -1,7 +1,6 @@
 use crate::envir;
 use crate::errors::Error;
 use crate::eval::{eval, eval_file, eval_iter, return_last};
-use crate::iter::TryIter;
 use crate::list::List;
 use crate::types::{FuncResult, Lambda, Sexpr, TcoResult};
 
@@ -102,23 +101,21 @@ fn cons(args: &Args, env: &mut Env) -> FuncResult {
     let lhs = iter.next();
     let rhs = iter.next();
 
-    iter.err()?;
     if iter.next().is_some() {
         return Err(Error::WrongArgNum);
     }
 
-    let list = match rhs {
-        Some(Sexpr::List(list)) => list,
-        Some(sexpr) => List::from(sexpr),
-        None => return Err(Error::WrongArgNum),
+    let list = match rhs.ok_or(Error::WrongArgNum)?? {
+        Sexpr::List(list) => list,
+        sexpr => List::from(sexpr),
     };
-    Ok(Sexpr::List(list.push_front(lhs.unwrap())))
+    Ok(Sexpr::List(list.push_front(lhs.unwrap()?)))
 }
 
 fn list(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
-    let list: List<Sexpr> = iter.collect();
-    iter.err().and(Ok(Sexpr::List(list)))
+    let list: Result<List<Sexpr>, Error<Sexpr>> = iter.collect();
+    Ok(Sexpr::List(list?))
 }
 
 fn begin(args: &Args, env: &mut Env) -> TcoResult {
@@ -144,21 +141,21 @@ fn not(args: &Args, env: &mut Env) -> FuncResult {
 fn andfn(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
     for elem in &mut *iter {
-        if !elem.is_true() {
-            return iter.err().and(Ok(Sexpr::False));
+        if !elem?.is_true() {
+            return Ok(Sexpr::False);
         }
     }
-    iter.err().and(Ok(Sexpr::True))
+    Ok(Sexpr::True)
 }
 
 fn orfn(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
     for elem in &mut *iter {
-        if elem.is_true() {
-            return iter.err().and(Ok(Sexpr::True));
+        if elem?.is_true() {
+            return Ok(Sexpr::True);
         }
     }
-    iter.err().and(Ok(Sexpr::False))
+    Ok(Sexpr::False)
 }
 
 fn list_reduce(
@@ -172,17 +169,17 @@ fn list_reduce(
     match iter.next() {
         Some(sexpr) => {
             if args.has_next() {
-                acc = sexpr
+                acc = sexpr?
             } else {
-                return func(init, sexpr);
+                return func(init, sexpr?);
             }
         }
-        None => return iter.err().and(Ok(init)),
+        None => return Ok(init),
     }
     for elem in &mut *iter {
-        acc = func(acc, elem)?;
+        acc = func(acc, elem?)?;
     }
-    iter.err().and(Ok(acc))
+    Ok(acc)
 }
 
 fn add(args: &Args, env: &mut Env) -> FuncResult {
@@ -210,18 +207,18 @@ fn equal(args: &Args, env: &mut Env) -> FuncResult {
 
     let mut prev;
     match iter.next() {
-        Some(sexpr) => prev = sexpr,
+        Some(sexpr) => prev = sexpr?,
         None => return Ok(result),
     }
 
     for elem in &mut *iter {
-        if elem != prev {
+        if elem.clone()? != prev {
             result = Sexpr::False;
             break;
         }
-        prev = elem;
+        prev = elem?;
     }
-    iter.err().and(Ok(result))
+    Ok(result)
 }
 
 #[inline]
@@ -230,21 +227,21 @@ fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
     let mut result = Sexpr::True;
 
     let mut prev = match iter.next() {
-        Some(sexpr) => sexpr,
+        Some(sexpr) => sexpr?,
         None => return Ok(result),
     };
 
     for elem in &mut *iter {
-        match prev.partial_cmp(&elem) {
-            Some(cmp) if cmp == order => prev = elem,
+        match prev.partial_cmp(&elem.clone()?) {
+            Some(cmp) if cmp == order => prev = elem?,
             Some(_) => {
                 result = Sexpr::False;
                 break;
             }
-            None => return Err(Error::NotANumber(elem)),
+            None => return Err(Error::NotANumber(elem?)),
         };
     }
-    iter.err().and(Ok(result))
+    Ok(result)
 }
 
 fn gt(args: &Args, env: &mut Env) -> FuncResult {
@@ -366,12 +363,12 @@ fn eval_and_bind(args: &Args, eval_env: &mut Env, save_env: &mut Env) -> FuncRes
 fn let_impl(args: &Args, call_env: &mut Env, eval_env: &mut Env) -> TcoResult {
     match args.head() {
         Some(Sexpr::List(ref list)) => {
-            let iter = &mut TryIter::new(list.iter().map(|elem| match elem {
-                Sexpr::List(ref binding) => eval_and_bind(binding, call_env, eval_env),
-                sexpr => Err(Error::WrongArg(sexpr.clone())),
-            }));
-            iter.last(); // iterate through all the elements
-            iter.err()?;
+            list.iter()
+                .map(|elem| match elem {
+                    Sexpr::List(ref binding) => eval_and_bind(binding, call_env, eval_env),
+                    sexpr => Err(Error::WrongArg(sexpr.clone())),
+                })
+                .collect::<Result<Vec<_>, Error<Sexpr>>>()?;
         }
         Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
         None => return Err(Error::WrongArgNum),
@@ -482,12 +479,10 @@ fn to_float(args: &Args, env: &mut Env) -> FuncResult {
 #[inline]
 fn stringify(args: &Args, env: &mut Env) -> Result<String, Error<Sexpr>> {
     let iter = &mut eval_iter(args, env);
-    let string = iter
-        .map(|elem| elem.to_string())
-        .collect::<Vec<String>>()
-        .join(" ");
-    iter.err()?;
-    Ok(string)
+    let string: Result<Vec<String>, Error<Sexpr>> = iter
+        .map(|elem| elem.map(|sexpr| sexpr.to_string()))
+        .collect();
+    Ok(string?.join(" "))
 }
 
 fn to_string(args: &Args, env: &mut Env) -> FuncResult {

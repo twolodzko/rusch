@@ -1,7 +1,6 @@
 use crate::envir;
 use crate::errors::{Error, ReadError};
 use crate::io::FileReader;
-use crate::iter::TryIter;
 use crate::list::List;
 use crate::parser::read_sexpr;
 use crate::types::{FuncResult, Lambda, Sexpr, TcoResult};
@@ -49,8 +48,8 @@ fn eval_list(list: &List<Sexpr>, env: &mut Env) -> TcoResult {
 pub fn eval_iter<'a>(
     sexprs: &'a List<Sexpr>,
     env: &'a mut Env,
-) -> TryIter<impl Iterator<Item = FuncResult> + 'a, Sexpr, Error<Sexpr>> {
-    TryIter::new(sexprs.iter().map(|elem| eval(elem, env)))
+) -> impl Iterator<Item = FuncResult> + 'a {
+    sexprs.iter().map(|elem| eval(elem, env))
 }
 
 /// Evaluate all the elements of the list but last, return last element unevaluated
@@ -84,14 +83,15 @@ pub fn eval_file(filename: &str, env: &mut Env) -> EvalResult {
 
 impl Lambda {
     pub fn from(vars: &List<Sexpr>, body: &List<Sexpr>, env: &mut Env) -> FuncResult {
-        let iter = &mut TryIter::new(vars.iter().map(|elem| match elem {
-            Sexpr::Symbol(name) => Ok(name),
-            sexpr => Err(Error::WrongArg(sexpr.clone())),
-        }));
-        let vars: Vec<String> = iter.cloned().collect();
-        iter.err()?;
+        let vars: Result<Vec<String>, Error<Sexpr>> = vars
+            .iter()
+            .map(|elem| match elem {
+                Sexpr::Symbol(name) => Ok(name.clone()),
+                sexpr => Err(Error::WrongArg(sexpr.clone())),
+            })
+            .collect();
         Ok(Sexpr::Lambda(Box::new(Lambda {
-            vars,
+            vars: vars?,
             body: body.clone(),
             env: env.clone(),
         })))

@@ -2,7 +2,6 @@ pub mod envir;
 mod errors;
 pub mod eval;
 pub mod io;
-mod iter;
 mod list;
 pub mod parser;
 mod reader;

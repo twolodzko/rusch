@@ -181,21 +181,14 @@ fn list_reduce(
     func: impl Fn(Sexpr, Sexpr) -> FuncResult,
 ) -> FuncResult {
     let iter = &mut eval_iter(args, env);
-    let mut acc;
-    match iter.next() {
-        Some(sexpr) => {
-            if args.has_next() {
-                acc = sexpr?
-            } else {
-                return func(init, sexpr?);
-            }
-        }
+    let acc = match iter.next() {
+        Some(sexpr) => sexpr?,
         None => return Ok(init),
+    };
+    if !args.has_next() {
+        return func(init, acc);
     }
-    for elem in &mut *iter {
-        acc = func(acc, elem?)?;
-    }
-    Ok(acc)
+    iter.try_fold(acc, |acc, x| func(acc, x?))
 }
 
 fn add(args: &Args, env: &mut Env) -> FuncResult {

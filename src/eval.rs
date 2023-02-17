@@ -46,15 +46,15 @@ fn eval_list(list: &List<Sexpr>, env: &mut Env) -> TcoResult {
 
 #[inline]
 pub fn eval_iter<'a>(
-    sexprs: &'a List<Sexpr>,
+    args: &'a List<Sexpr>,
     env: &'a mut Env,
 ) -> impl Iterator<Item = FuncResult> + 'a {
-    sexprs.iter().map(|elem| eval(elem, env))
+    args.iter().map(|elem| eval(elem, env))
 }
 
 /// Evaluate all the elements of the list but last, return last element unevaluated
 #[inline]
-pub fn return_last(args: &List<Sexpr>, env: &mut Env) -> TcoResult {
+pub fn eval_but_last(args: &List<Sexpr>, env: &mut Env) -> TcoResult {
     let iter = &mut args.iter();
     let mut last = match iter.next() {
         Some(sexpr) => sexpr,
@@ -113,7 +113,7 @@ impl Lambda {
             }
         }
 
-        return_last(&self.body, local)
+        eval_but_last(&self.body, local)
     }
 }
 

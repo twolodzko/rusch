@@ -1,6 +1,6 @@
 use crate::envir;
 use crate::errors::Error;
-use crate::eval::{eval, eval_file, eval_iter, return_last};
+use crate::eval::{eval, eval_but_last, eval_file, eval_iter};
 use crate::list::List;
 use crate::types::{FuncResult, Lambda, Sexpr, TcoResult};
 
@@ -98,18 +98,18 @@ fn cdr(args: &Args, env: &mut Env) -> FuncResult {
 fn cons(args: &Args, env: &mut Env) -> FuncResult {
     // (cons lhs rhs)
     let iter = &mut eval_iter(args, env);
-    let lhs = iter.next();
-    let rhs = iter.next();
+    let lhs = iter.next().unwrap_or(Err(Error::WrongArgNum))?;
+    let rhs = iter.next().unwrap_or(Err(Error::WrongArgNum))?;
 
     if iter.next().is_some() {
         return Err(Error::WrongArgNum);
     }
 
-    let list = match rhs.unwrap_or(Err(Error::WrongArgNum))? {
+    let list = match rhs {
         Sexpr::List(list) => list,
         sexpr => List::from(sexpr),
     };
-    Ok(Sexpr::List(list.push_front(lhs.unwrap()?)))
+    Ok(Sexpr::List(list.push_front(lhs)))
 }
 
 fn list(args: &Args, env: &mut Env) -> FuncResult {
@@ -119,7 +119,7 @@ fn list(args: &Args, env: &mut Env) -> FuncResult {
 }
 
 fn begin(args: &Args, env: &mut Env) -> TcoResult {
-    return_last(args, env)
+    eval_but_last(args, env)
 }
 
 fn lambda(args: &Args, env: &mut Env) -> FuncResult {
@@ -140,19 +140,23 @@ fn not(args: &Args, env: &mut Env) -> FuncResult {
 
 fn andfn(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
+    let mut last = Sexpr::True;
     for elem in &mut *iter {
-        if !elem?.is_true() {
+        let elem = elem?;
+        if !elem.is_true() {
             return Ok(Sexpr::False);
-        }
+        };
+        last = elem;
     }
-    Ok(Sexpr::True)
+    Ok(last)
 }
 
 fn orfn(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
     for elem in &mut *iter {
-        if elem?.is_true() {
-            return Ok(Sexpr::True);
+        let elem = elem?;
+        if elem.is_true() {
+            return Ok(elem);
         }
     }
     Ok(Sexpr::False)
@@ -276,7 +280,7 @@ fn condfn(args: &Args, env: &mut Env) -> TcoResult {
         let condition = eval(sexpr, env)?;
         if condition.is_true() {
             match list.tail() {
-                Some(ref body) => return return_last(body, env),
+                Some(ref body) => return eval_but_last(body, env),
                 None => return Ok((condition, None)),
             }
         }
@@ -376,7 +380,7 @@ fn let_impl(args: &Args, call_env: &mut Env, eval_env: &mut Env) -> TcoResult {
         None => return Err(Error::WrongArgNum),
     }
 
-    return_last(&args.tail().unwrap_or_default(), eval_env)
+    eval_but_last(&args.tail().unwrap_or_default(), eval_env)
 }
 
 fn let_core(args: &Args, env: &mut Env) -> TcoResult {
@@ -1008,11 +1012,13 @@ mod tests {
         assert_eval_eq!("(and #t)", Ok(Sexpr::True));
         assert_eval_eq!("(and #t '() 42 (= 2 (+ 1 1)))", Ok(Sexpr::True));
         assert_eval_eq!("(and #t '() #f 42)", Ok(Sexpr::False));
+        assert_eval_eq!("(and #t 1 2 3)", Ok(Sexpr::Integer(3)));
 
         assert_eval_eq!("(or)", Ok(Sexpr::False));
         assert_eval_eq!("(or #f)", Ok(Sexpr::False));
         assert_eval_eq!("(or #t)", Ok(Sexpr::True));
         assert_eval_eq!("(or #f (= 5 6) #t #f)", Ok(Sexpr::True));
+        assert_eval_eq!("(or #f (+ 2 2) #t #f)", Ok(Sexpr::Integer(4)));
     }
 
     #[test]

@@ -83,8 +83,8 @@ impl fmt::Display for Sexpr {
             Float(value) => value.fmt(f),
             Integer(value) => value.fmt(f),
             List(ref list) => list.fmt(f),
-            Func(ref func) => write!(f, "Func<{:#?}>", *func as usize),
-            Tco(ref func) => write!(f, "Func<{:#?}>", *func as usize),
+            Func(ref func) => write!(f, "Func<{:#x}>", *func as usize),
+            Tco(ref func) => write!(f, "Func<{:#x}>", *func as usize),
             Lambda(ref lambda) => lambda.fmt(f),
             Nil => write!(f, "<nil>"),
         }

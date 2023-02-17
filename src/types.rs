@@ -405,5 +405,12 @@ mod tests {
         assert!(Integer(2) > Float(1.0));
         assert!(Integer(1) < Integer(2));
         assert!(Integer(100) <= Integer(200));
+
+        let first = Sexpr::Func(|_, _| Ok(Sexpr::True));
+        let second = Sexpr::Func(|_, _| Ok(Sexpr::False));
+        assert!(first == first);
+        assert!(second == second);
+        assert!(first != second);
+        assert!(first != Sexpr::True);
     }
 }

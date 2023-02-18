@@ -355,7 +355,7 @@ fn set(args: &Args, env: &mut Env) -> FuncResult {
 }
 
 #[inline]
-fn eval_and_bind(args: &Args, eval_env: &mut Env, save_env: &mut Env) -> FuncResult {
+fn eval_and_bind(args: &Args, eval_env: &mut Env, save_env: &mut Env) -> Result<(), Error<Sexpr>> {
     let mut iter = args.iter();
 
     let key = match iter.next() {
@@ -373,41 +373,23 @@ fn eval_and_bind(args: &Args, eval_env: &mut Env, save_env: &mut Env) -> FuncRes
 
     let val = eval(sexpr, eval_env)?;
     save_env.insert(key, val);
-    Ok(Sexpr::Nil)
+    Ok(())
 }
 
 #[inline]
 fn let_impl(args: &Args, call_env: &mut Env, eval_env: &mut Env) -> TcoResult {
     match args.head() {
         Some(Sexpr::List(ref list)) => {
-            let mut err = Ok(());
-            list.iter()
-                .map(|elem| match elem {
-                    Sexpr::List(ref binding) => eval_and_bind(binding, call_env, eval_env),
-                    sexpr => Err(Error::WrongArg(sexpr.clone())),
-                })
-                .scan(&mut err, until_err)
-                // to consume the iterator: https://github.com/rust-lang/rust/issues/64117
-                .for_each(drop);
-            err?;
+            list.iter().try_for_each(|elem| match elem {
+                Sexpr::List(ref binding) => eval_and_bind(binding, call_env, eval_env),
+                sexpr => Err(Error::WrongArg(sexpr.clone())),
+            })?;
         }
         Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
         None => return Err(Error::WrongArgNum),
     }
 
     eval_but_last(&args.tail().unwrap_or_default(), eval_env)
-}
-
-// See: https://stackoverflow.com/a/63120052/3986320
-#[inline]
-fn until_err<T, E>(err: &mut &mut Result<(), E>, item: Result<T, E>) -> Option<T> {
-    match item {
-        Ok(item) => Some(item),
-        Err(e) => {
-            **err = Err(e);
-            None
-        }
-    }
 }
 
 fn let_core(args: &Args, env: &mut Env) -> TcoResult {

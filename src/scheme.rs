@@ -78,7 +78,7 @@ fn cdr(args: &Args, env: &mut Env) -> FuncResult {
     if list.is_empty() {
         return Err(Error::WrongArg(Sexpr::List(list.clone())));
     };
-    Ok(Sexpr::List(list.tail().unwrap_or_default()))
+    Ok(Sexpr::List(list.tail_or_empty()))
 }
 
 fn cons(args: &Args, env: &mut Env) -> FuncResult {
@@ -104,7 +104,7 @@ fn list(args: &Args, env: &mut Env) -> FuncResult {
 
 fn lambda(args: &Args, env: &mut Env) -> FuncResult {
     let vars = head_or_err(args).and_then(list_or_err)?;
-    let body = args.tail().unwrap_or_default();
+    let body = args.tail_or_empty();
     lambda_init(vars, &body, env)
 }
 
@@ -275,7 +275,7 @@ fn define(args: &Args, env: &mut Env) -> FuncResult {
     #[inline]
     fn from_list(list: &List<Sexpr>, rhs: &List<Sexpr>, env: &mut Env) -> FuncResult {
         let key = head_or_err(list).and_then(symbol_or_err)?;
-        let vars = list.tail().unwrap_or_default();
+        let vars = list.tail_or_empty();
         let lambda = lambda_init(&vars, rhs, env)?;
         env.insert(key, lambda);
         Ok(Sexpr::Nil)
@@ -339,13 +339,13 @@ fn let_core(args: &Args, env: &mut Env) -> TcoResult {
     let local = &mut env.branch();
     match head_or_err(args)? {
         Sexpr::List(ref bindings) => {
-            let body = args.tail().unwrap_or_default();
+            let body = args.tail_or_empty();
             let_impl(bindings, &body, env, local)
         }
         Sexpr::Symbol(ref key) => {
             let tail = args.tail().ok_or(Error::WrongArgNum)?;
             let bindings = head_or_err(&tail).and_then(list_or_err)?;
-            let body = tail.tail().unwrap_or_default();
+            let body = tail.tail_or_empty();
             named_let(key, bindings, &body, local)
         }
         sexpr => Err(Error::WrongArg(sexpr.clone())),
@@ -355,7 +355,7 @@ fn let_core(args: &Args, env: &mut Env) -> TcoResult {
 fn let_star(args: &Args, env: &mut Env) -> TcoResult {
     let local = &mut env.branch();
     let bindings = head_or_err(args).and_then(list_or_err)?;
-    let body = args.tail().unwrap_or_default();
+    let body = args.tail_or_empty();
     let_impl(bindings, &body, &mut local.clone(), local)
 }
 
@@ -527,11 +527,10 @@ fn reverse(args: &Args, env: &mut Env) -> FuncResult {
 
 #[inline]
 fn stringify(args: &Args, env: &mut Env) -> Result<String, Error<Sexpr>> {
-    let iter = &mut eval_iter(args, env);
-    let string: Result<Vec<String>, Error<Sexpr>> = iter
+    let string = eval_iter(args, env)
         .map(|elem| elem.map(|sexpr| sexpr.to_string()))
-        .collect();
-    Ok(string?.join(" "))
+        .collect::<Result<Vec<String>, Error<Sexpr>>>()?;
+    Ok(string.join(" "))
 }
 
 #[inline]

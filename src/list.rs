@@ -64,6 +64,11 @@ impl<T> List<T> {
     }
 
     #[inline]
+    pub fn tail_or_empty(&self) -> List<T> {
+        self.tail().unwrap_or_default()
+    }
+
+    #[inline]
     pub fn has_next(&self) -> bool {
         match self.head.as_ref() {
             None => false,

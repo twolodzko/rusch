@@ -41,7 +41,6 @@ pub fn root_env() -> Env {
         ("let*", Tco(let_star)),
         ("list", Func(list)),
         ("load", Func(load)),
-        ("load", Func(load)),
         ("not", Func(not)),
         ("null?", Func(is_null)),
         ("number?", Func(is_number)),

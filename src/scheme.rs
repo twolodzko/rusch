@@ -49,6 +49,7 @@ pub fn root_env() -> Env {
         ("pair?", Func(is_pair)),
         ("procedure?", Func(is_procedure)),
         ("quote", Func(quote)),
+        ("reverse", Func(reverse)),
         ("set!", Func(set)),
         ("string?", Func(is_string)),
         ("string", Func(to_string)),
@@ -60,7 +61,7 @@ fn quote(args: &Args, _env: &mut Env) -> FuncResult {
     if args.has_next() {
         return Err(Error::WrongArgNum);
     }
-    args.head().cloned().ok_or(Error::WrongArgNum)
+    head_or_err(args).cloned()
 }
 
 /// Evaluate first argument, raise error if more arguments were passed
@@ -69,30 +70,25 @@ fn eval_one_arg(args: &Args, env: &mut Env) -> FuncResult {
     if args.has_next() {
         return Err(Error::WrongArgNum);
     }
-    let sexpr = args.head().ok_or(Error::WrongArgNum)?;
+    let sexpr = head_or_err(args)?;
     eval(sexpr, env)
 }
 
 fn car(args: &Args, env: &mut Env) -> FuncResult {
-    match eval_one_arg(args, env)? {
-        Sexpr::List(list) => list
-            .head()
-            .cloned()
-            .ok_or(Error::WrongArg(Sexpr::List(list))),
-        sexpr => Err(Error::WrongArg(sexpr)),
-    }
+    let arg = eval_one_arg(args, env)?;
+    let list = list_or_err(&arg)?;
+    list.head()
+        .cloned()
+        .ok_or_else(|| Error::WrongArg(Sexpr::List(list.clone())))
 }
 
 fn cdr(args: &Args, env: &mut Env) -> FuncResult {
-    match eval_one_arg(args, env)? {
-        Sexpr::List(list) => {
-            if list.is_empty() {
-                return Err(Error::WrongArg(Sexpr::List(list)));
-            };
-            Ok(Sexpr::List(list.tail().unwrap_or_default()))
-        }
-        sexpr => Err(Error::WrongArg(sexpr)),
-    }
+    let arg = eval_one_arg(args, env)?;
+    let list = list_or_err(&arg)?;
+    if list.is_empty() {
+        return Err(Error::WrongArg(Sexpr::List(list.clone())));
+    };
+    Ok(Sexpr::List(list.tail().unwrap_or_default()))
 }
 
 fn cons(args: &Args, env: &mut Env) -> FuncResult {
@@ -119,24 +115,16 @@ fn list(args: &Args, env: &mut Env) -> FuncResult {
 }
 
 fn lambda(args: &Args, env: &mut Env) -> FuncResult {
-    match args.head() {
-        Some(Sexpr::List(ref vars)) => {
-            let body = args.tail().unwrap_or_default();
-            lambda_init(vars, &body, env)
-        }
-        Some(sexpr) => Err(Error::WrongArg(sexpr.clone())),
-        None => Err(Error::WrongArgNum),
-    }
+    let vars = list_or_err(head_or_err(args)?)?;
+    let body = args.tail().unwrap_or_default();
+    lambda_init(vars, &body, env)
 }
 
 #[inline]
 fn lambda_init(vars: &List<Sexpr>, body: &List<Sexpr>, env: &mut Env) -> FuncResult {
     let vars: Result<Vec<String>, Error<Sexpr>> = vars
         .iter()
-        .map(|elem| match elem {
-            Sexpr::Symbol(name) => Ok(name.clone()),
-            sexpr => Err(Error::WrongArg(sexpr.clone())),
-        })
+        .map(|elem| Ok(symbol_name_or_err(elem)?.clone()))
         .collect();
     Ok(Sexpr::lambda(vars?, body.clone(), env.clone()))
 }
@@ -242,14 +230,15 @@ fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
 
     for elem in &mut *iter {
         let elem = elem?;
-        match prev.partial_cmp(&elem) {
-            Some(cmp) if cmp == order => prev = elem,
-            Some(_) => {
-                result = Sexpr::False;
-                break;
-            }
-            None => return Err(Error::NotANumber(elem)),
-        };
+        let cmp = prev
+            .partial_cmp(&elem)
+            .ok_or_else(|| Error::NotANumber(elem.clone()))?;
+        if cmp == order {
+            prev = elem
+        } else {
+            result = Sexpr::False;
+            break;
+        }
     }
     Ok(result)
 }
@@ -276,12 +265,8 @@ fn iffn(args: &Args, env: &mut Env) -> TcoResult {
 
 fn condfn(args: &Args, env: &mut Env) -> TcoResult {
     for branch in args.iter() {
-        let list = match branch {
-            Sexpr::List(list) => list,
-            sexpr => return Err(Error::WrongArg(sexpr.clone())),
-        };
-        let sexpr = list.head().ok_or(Error::WrongArgNum)?;
-        let condition = eval(sexpr, env)?;
+        let list = list_or_err(branch)?;
+        let condition = eval(head_or_err(list)?, env)?;
         if condition.is_true() {
             match list.tail() {
                 Some(ref body) => return eval_but_last(body, env),
@@ -306,11 +291,7 @@ fn define(args: &Args, env: &mut Env) -> FuncResult {
 
     #[inline]
     fn from_list(list: &List<Sexpr>, rhs: &List<Sexpr>, env: &mut Env) -> FuncResult {
-        let key = match list.head() {
-            Some(Sexpr::Symbol(name)) => name,
-            Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
-            None => return Err(Error::WrongArgNum),
-        };
+        let key = symbol_name_or_err(head_or_err(list)?)?;
         let vars = list.tail().unwrap_or_default();
         let lambda = lambda_init(&vars, rhs, env)?;
         env.insert(key, lambda);
@@ -318,28 +299,19 @@ fn define(args: &Args, env: &mut Env) -> FuncResult {
     }
 
     let rhs = args.tail().ok_or(Error::WrongArgNum)?;
-    match args.head() {
-        Some(Sexpr::Symbol(key)) => from_symbol(key, &rhs, env),
-        Some(Sexpr::List(list)) => from_list(list, &rhs, env),
-        Some(sexpr) => Err(Error::WrongArg(sexpr.clone())),
-        None => Err(Error::WrongArgNum),
+    match head_or_err(args)? {
+        Sexpr::Symbol(key) => from_symbol(key, &rhs, env),
+        Sexpr::List(list) => from_list(list, &rhs, env),
+        sexpr => Err(Error::WrongArg(sexpr.clone())),
     }
 }
 
 fn set(args: &Args, env: &mut Env) -> FuncResult {
     let mut iter = args.iter();
 
-    let key = match iter.next() {
-        Some(Sexpr::Symbol(name)) => name,
-        Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
-        None => return Err(Error::WrongArgNum),
-    };
+    let key = symbol_name_or_err(iter.next().ok_or(Error::WrongArgNum)?)?;
+    let val = iter.next().ok_or(Error::WrongArgNum)?;
 
-    let val = match iter.next() {
-        Some(sexpr) => eval(sexpr, env)?,
-        // missing second arg
-        None => return Err(Error::WrongArgNum),
-    };
     if iter.next().is_some() {
         // has third arg
         return Err(Error::WrongArgNum);
@@ -347,7 +319,7 @@ fn set(args: &Args, env: &mut Env) -> FuncResult {
 
     match env.find_env(key) {
         Some(ref mut local) => {
-            local.insert(key, val);
+            local.insert(key, eval(val, env)?);
             Ok(Sexpr::Nil)
         }
         None => Err(Error::NotFound(key.clone())),
@@ -355,51 +327,70 @@ fn set(args: &Args, env: &mut Env) -> FuncResult {
 }
 
 #[inline]
-fn eval_and_bind(args: &Args, eval_env: &mut Env, save_env: &mut Env) -> Result<(), Error<Sexpr>> {
+fn eval_and_bind(
+    args: &Args,
+    eval_env: &mut Env,
+    save_env: &mut Env,
+) -> Result<String, Error<Sexpr>> {
     let mut iter = args.iter();
 
-    let key = match iter.next() {
-        Some(Sexpr::Symbol(name)) => name,
-        Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
-        None => return Err(Error::WrongArgNum),
-    };
-
-    let sexpr = iter.next().ok_or(Error::WrongArgNum)?;
+    let key = symbol_name_or_err(iter.next().ok_or(Error::WrongArgNum)?)?;
+    let val = iter.next().ok_or(Error::WrongArgNum)?;
 
     if iter.next().is_some() {
         // has third arg
         return Err(Error::WrongArgNum);
     }
 
-    let val = eval(sexpr, eval_env)?;
-    save_env.insert(key, val);
-    Ok(())
-}
-
-#[inline]
-fn let_impl(args: &Args, call_env: &mut Env, eval_env: &mut Env) -> TcoResult {
-    match args.head() {
-        Some(Sexpr::List(ref list)) => {
-            list.iter().try_for_each(|elem| match elem {
-                Sexpr::List(ref binding) => eval_and_bind(binding, call_env, eval_env),
-                sexpr => Err(Error::WrongArg(sexpr.clone())),
-            })?;
-        }
-        Some(sexpr) => return Err(Error::WrongArg(sexpr.clone())),
-        None => return Err(Error::WrongArgNum),
-    }
-
-    eval_but_last(&args.tail().unwrap_or_default(), eval_env)
+    save_env.insert(key, eval(val, eval_env)?);
+    Ok(key.clone())
 }
 
 fn let_core(args: &Args, env: &mut Env) -> TcoResult {
     let local = &mut env.branch();
-    let_impl(args, env, local)
+    match head_or_err(args)? {
+        Sexpr::List(ref bindings) => {
+            let body = args.tail().unwrap_or_default();
+            let_impl(bindings, &body, env, local)
+        }
+        Sexpr::Symbol(ref key) => {
+            let tail = args.tail().ok_or(Error::WrongArgNum)?;
+            let bindings = list_or_err(head_or_err(&tail)?)?;
+            let body = tail.tail().unwrap_or_default();
+            named_let(key, bindings, &body, local)
+        }
+        sexpr => Err(Error::WrongArg(sexpr.clone())),
+    }
 }
 
 fn let_star(args: &Args, env: &mut Env) -> TcoResult {
     let local = &mut env.branch();
-    let_impl(args, &mut local.clone(), local)
+    let bindings = list_or_err(head_or_err(args)?)?;
+    let body = args.tail().unwrap_or_default();
+    let_impl(bindings, &body, &mut local.clone(), local)
+}
+
+#[inline]
+fn let_impl(bindings: &Args, body: &Args, call_env: &mut Env, eval_env: &mut Env) -> TcoResult {
+    bindings.iter().try_for_each(|elem| {
+        eval_and_bind(list_or_err(elem)?, call_env, eval_env)?;
+        Ok(())
+    })?;
+    eval_but_last(body, eval_env)
+}
+
+#[inline]
+fn named_let(key: &String, bindings: &Args, body: &Args, env: &mut Env) -> TcoResult {
+    let local = &mut env.branch();
+
+    let vars: Result<Vec<String>, Error<Sexpr>> = bindings
+        .iter()
+        .map(|elem| eval_and_bind(list_or_err(elem)?, env, &mut local.clone()))
+        .collect();
+    let lambda = Sexpr::lambda(vars?, body.clone(), env.clone());
+    env.insert(key, lambda);
+
+    eval_but_last(body, local)
 }
 
 fn is_symbol(args: &Args, env: &mut Env) -> FuncResult {
@@ -517,7 +508,7 @@ fn evalfn(args: &Args, env: &mut Env) -> FuncResult {
     if args.has_next() {
         return Err(Error::WrongArgNum);
     }
-    let sexpr = args.head().ok_or(Error::WrongArgNum)?;
+    let sexpr = head_or_err(args)?;
     eval(&eval(sexpr, env)?, env)
 }
 
@@ -536,6 +527,38 @@ fn load(args: &Args, env: &mut Env) -> FuncResult {
         }
     }
     Ok(last)
+}
+
+fn reverse(args: &Args, env: &mut Env) -> FuncResult {
+    let arg = head_or_err(args)?;
+    let arg = eval(arg, env)?;
+    let list = list_or_err(&arg)?;
+    let mut out = List::empty();
+    for elem in list.iter() {
+        out = out.push_front(elem.clone())
+    }
+    Ok(Sexpr::List(out))
+}
+
+#[inline]
+fn list_or_err(sexpr: &Sexpr) -> Result<&List<Sexpr>, Error<Sexpr>> {
+    match sexpr {
+        Sexpr::List(ref list) => Ok(list),
+        sexpr => Err(Error::WrongArg(sexpr.clone())),
+    }
+}
+
+#[inline]
+fn symbol_name_or_err(sexpr: &Sexpr) -> Result<&String, Error<Sexpr>> {
+    match sexpr {
+        Sexpr::Symbol(ref name) => Ok(name),
+        sexpr => Err(Error::WrongArg(sexpr.clone())),
+    }
+}
+
+#[inline]
+fn head_or_err(args: &Args) -> Result<&Sexpr, Error<Sexpr>> {
+    args.head().ok_or(Error::WrongArgNum)
 }
 
 #[inline]
@@ -969,6 +992,34 @@ mod tests {
     }
 
     #[test]
+    fn named_let() {
+        assert_eval_eq!("(let f ())", Ok(Sexpr::Nil));
+        assert_eval_eq!(
+            "(let rev ((ls '(a b c)) (new '())) \
+                (if (null? ls) \
+                    new \
+                    (rev (cdr ls) (cons (car ls) new))))",
+            Ok(Sexpr::from(vec![
+                Sexpr::symbol("c"),
+                Sexpr::symbol("b"),
+                Sexpr::symbol("a")
+            ]))
+        );
+        assert_eval_eq!(
+            "(let fac ((n 0)) (if (= n 0) 1 (* n (fac (- n 1)))))",
+            Ok(Sexpr::Integer(1))
+        );
+        assert_eval_eq!(
+            "(let fac ((n 10)) (if (= n 0) 1 (* n (fac (- n 1)))))",
+            Ok(Sexpr::Integer(3628800))
+        );
+        assert_eval_eq!(
+            "(let fib ((i 10)) (cond ((= i 0) 0) ((= i 1) 1) (else (+ (fib (- i 1)) (fib (- i 2))))))",
+            Ok(Sexpr::Integer(55))
+        );
+    }
+
+    #[test]
     fn closures() {
         assert_eval_eq!(
             "(((lambda (x) (lambda (y) (/ x y))) 1) 2)",
@@ -1189,6 +1240,27 @@ mod tests {
         assert_eq!(parse_eval!("(fibo 7)", env), Ok(Sexpr::Integer(13)));
         assert_eq!(parse_eval!("(fibo 9)", env), Ok(Sexpr::Integer(34)));
         assert_eq!(parse_eval!("(fibo 10)", env), Ok(Sexpr::Integer(55)));
+    }
+
+    #[test]
+    fn reverse() {
+        assert_eval_eq!("(reverse '())", Ok(Sexpr::null()));
+        assert_eval_eq!(
+            "(reverse '(a b c))",
+            Ok(Sexpr::from(vec![
+                Sexpr::symbol("c"),
+                Sexpr::symbol("b"),
+                Sexpr::symbol("a"),
+            ]))
+        );
+        assert_eval_eq!(
+            "(reverse (list 'foo (+ 2 2) #t))",
+            Ok(Sexpr::from(vec![
+                Sexpr::True,
+                Sexpr::Integer(4),
+                Sexpr::symbol("foo"),
+            ]))
+        );
     }
 
     #[test]

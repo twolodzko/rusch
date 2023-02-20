@@ -99,9 +99,7 @@ fn cons(args: &Args, env: &mut Env) -> FuncResult {
 }
 
 fn list(args: &Args, env: &mut Env) -> FuncResult {
-    let iter = &mut eval_iter(args, env);
-    let list: Result<List<Sexpr>, Error<Sexpr>> = iter.collect();
-    Ok(Sexpr::List(list?))
+    eval_iter(args, env).collect()
 }
 
 fn lambda(args: &Args, env: &mut Env) -> FuncResult {

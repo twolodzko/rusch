@@ -159,6 +159,12 @@ impl From<Vec<Sexpr>> for Sexpr {
     }
 }
 
+impl FromIterator<Sexpr> for Sexpr {
+    fn from_iter<I: IntoIterator<Item = Sexpr>>(iter: I) -> Self {
+        Sexpr::List(List::<Sexpr>::from_iter(iter))
+    }
+}
+
 impl ops::Add<Sexpr> for Sexpr {
     type Output = FuncResult;
 

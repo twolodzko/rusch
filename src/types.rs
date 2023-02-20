@@ -420,4 +420,73 @@ mod tests {
         assert!(first != second);
         assert!(first != Sexpr::True);
     }
+
+    #[test]
+    fn from() {
+        assert_eq!(Sexpr::from(true), Sexpr::True);
+        assert_eq!(Sexpr::from(false), Sexpr::False);
+        assert_eq!(
+            Sexpr::from("hello world"),
+            Sexpr::String(String::from("hello world"))
+        );
+        assert_eq!(
+            Sexpr::from(vec![
+                Sexpr::Integer(1),
+                Sexpr::Integer(2),
+                Sexpr::Integer(3)
+            ]),
+            Sexpr::List(List::from(vec![
+                Sexpr::Integer(1),
+                Sexpr::Integer(2),
+                Sexpr::Integer(3)
+            ]))
+        );
+        assert_eq!(List::from(Sexpr::True), List::from(vec![Sexpr::True]));
+    }
+
+    #[test]
+    fn from_iterator() {
+        use crate::errors::Error;
+
+        let simple: Vec<Sexpr> = vec![Sexpr::Integer(1), Sexpr::Integer(2), Sexpr::Integer(3)];
+        assert_eq!(
+            simple.iter().cloned().collect::<Sexpr>(),
+            Sexpr::from(vec![
+                Sexpr::Integer(1),
+                Sexpr::Integer(2),
+                Sexpr::Integer(3)
+            ])
+        );
+
+        let passing: Vec<Result<Sexpr, Error<Sexpr>>> = vec![
+            Ok(Sexpr::Integer(1)),
+            Ok(Sexpr::Integer(2)),
+            Ok(Sexpr::Integer(3)),
+        ];
+        assert_eq!(
+            passing
+                .iter()
+                .cloned()
+                .collect::<Result<Sexpr, Error<Sexpr>>>(),
+            Ok(Sexpr::from(vec![
+                Sexpr::Integer(1),
+                Sexpr::Integer(2),
+                Sexpr::Integer(3)
+            ]))
+        );
+
+        let failing: Vec<Result<Sexpr, Error<Sexpr>>> = vec![
+            Ok(Sexpr::Integer(1)),
+            Ok(Sexpr::Integer(2)),
+            Err(Error::from("ok")),
+            Ok(Sexpr::Integer(3)),
+        ];
+        assert_eq!(
+            failing
+                .iter()
+                .cloned()
+                .collect::<Result<Sexpr, Error<Sexpr>>>(),
+            Err(Error::from("ok"))
+        );
+    }
 }

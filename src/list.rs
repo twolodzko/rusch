@@ -153,12 +153,12 @@ mod tests {
 
     #[test]
     fn empty() {
-        assert_eq!(List::<i64>::empty(), List { head: None })
+        assert_eq!(List::<i32>::empty(), List { head: None })
     }
 
     #[test]
     fn default() {
-        assert_eq!(List::<i64>::default(), List::empty())
+        assert_eq!(List::<i32>::default(), List::empty())
     }
 
     #[test]
@@ -215,12 +215,12 @@ mod tests {
         // Was not mutated
         assert_eq!(list.head(), Some(&1));
 
-        assert_eq!(list.iter().collect::<Vec<&i64>>(), vec![&1, &2, &3]);
+        assert_eq!(list.iter().collect::<Vec<&i32>>(), vec![&1, &2, &3]);
     }
 
     #[test]
     fn rev() {
-        assert_eq!(List::<i64>::empty().rev(), List::empty());
+        assert_eq!(List::<i32>::empty().rev(), List::empty());
 
         let list = List::from(vec![1, 2, 3]);
         assert_eq!(list.rev(), List::from(vec![3, 2, 1]));
@@ -231,7 +231,16 @@ mod tests {
 
     #[test]
     fn has_next() {
-        assert!(!List::<i64>::empty().has_next());
+        assert!(!List::<i32>::empty().has_next());
         assert!(List::from(vec![1, 2, 3]).has_next());
+    }
+
+    #[test]
+    fn tail_or_empty() {
+        assert_eq!(List::<i32>::empty().tail_or_empty(), List::empty());
+        assert_eq!(
+            List::from(vec![1, 2, 3]).tail_or_empty(),
+            List::from(vec![2, 3])
+        );
     }
 }

@@ -64,16 +64,6 @@ fn quote(args: &Args, _env: &mut Env) -> FuncResult {
     head_or_err(args).cloned()
 }
 
-/// Evaluate first argument, raise error if more arguments were passed
-#[inline]
-fn eval_one_arg(args: &Args, env: &mut Env) -> FuncResult {
-    if args.has_next() {
-        return Err(Error::WrongArgNum);
-    }
-    let sexpr = head_or_err(args)?;
-    eval(sexpr, env)
-}
-
 fn car(args: &Args, env: &mut Env) -> FuncResult {
     let arg = eval_one_arg(args, env)?;
     let list = list_or_err(&arg)?;
@@ -115,7 +105,7 @@ fn list(args: &Args, env: &mut Env) -> FuncResult {
 }
 
 fn lambda(args: &Args, env: &mut Env) -> FuncResult {
-    let vars = list_or_err(head_or_err(args)?)?;
+    let vars = head_or_err(args).and_then(list_or_err)?;
     let body = args.tail().unwrap_or_default();
     lambda_init(vars, &body, env)
 }
@@ -124,7 +114,7 @@ fn lambda(args: &Args, env: &mut Env) -> FuncResult {
 fn lambda_init(vars: &List<Sexpr>, body: &List<Sexpr>, env: &mut Env) -> FuncResult {
     let vars: Result<Vec<String>, Error<Sexpr>> = vars
         .iter()
-        .map(|elem| Ok(symbol_name_or_err(elem)?.clone()))
+        .map(|elem| Ok(symbol_or_err(elem)?.clone()))
         .collect();
     Ok(Sexpr::lambda(vars?, body.clone(), env.clone()))
 }
@@ -200,32 +190,29 @@ fn div(args: &Args, env: &mut Env) -> FuncResult {
 
 fn equal(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
-    let mut result = Sexpr::True;
 
     let mut prev = match iter.next() {
         Some(sexpr) => sexpr?,
-        None => return Ok(result),
+        None => return Ok(Sexpr::True),
     };
 
     for elem in &mut *iter {
         let elem = elem?;
         if elem != prev {
-            result = Sexpr::False;
-            break;
+            return Ok(Sexpr::False);
         }
         prev = elem;
     }
-    Ok(result)
+    Ok(Sexpr::True)
 }
 
 #[inline]
 fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
     let iter = &mut eval_iter(args, env);
-    let mut result = Sexpr::True;
 
     let mut prev = match iter.next() {
         Some(sexpr) => sexpr?,
-        None => return Ok(result),
+        None => return Ok(Sexpr::True),
     };
 
     for elem in &mut *iter {
@@ -233,14 +220,12 @@ fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
         let cmp = prev
             .partial_cmp(&elem)
             .ok_or_else(|| Error::NotANumber(elem.clone()))?;
-        if cmp == order {
-            prev = elem
-        } else {
-            result = Sexpr::False;
-            break;
+        if cmp != order {
+            return Ok(Sexpr::False);
         }
+        prev = elem
     }
-    Ok(result)
+    Ok(Sexpr::True)
 }
 
 fn gt(args: &Args, env: &mut Env) -> FuncResult {
@@ -291,7 +276,7 @@ fn define(args: &Args, env: &mut Env) -> FuncResult {
 
     #[inline]
     fn from_list(list: &List<Sexpr>, rhs: &List<Sexpr>, env: &mut Env) -> FuncResult {
-        let key = symbol_name_or_err(head_or_err(list)?)?;
+        let key = head_or_err(list).and_then(symbol_or_err)?;
         let vars = list.tail().unwrap_or_default();
         let lambda = lambda_init(&vars, rhs, env)?;
         env.insert(key, lambda);
@@ -309,7 +294,10 @@ fn define(args: &Args, env: &mut Env) -> FuncResult {
 fn set(args: &Args, env: &mut Env) -> FuncResult {
     let mut iter = args.iter();
 
-    let key = symbol_name_or_err(iter.next().ok_or(Error::WrongArgNum)?)?;
+    let key = iter
+        .next()
+        .ok_or(Error::WrongArgNum)
+        .and_then(symbol_or_err)?;
     let val = iter.next().ok_or(Error::WrongArgNum)?;
 
     if iter.next().is_some() {
@@ -334,7 +322,10 @@ fn eval_and_bind(
 ) -> Result<String, Error<Sexpr>> {
     let mut iter = args.iter();
 
-    let key = symbol_name_or_err(iter.next().ok_or(Error::WrongArgNum)?)?;
+    let key = iter
+        .next()
+        .ok_or(Error::WrongArgNum)
+        .and_then(symbol_or_err)?;
     let val = iter.next().ok_or(Error::WrongArgNum)?;
 
     if iter.next().is_some() {
@@ -355,7 +346,7 @@ fn let_core(args: &Args, env: &mut Env) -> TcoResult {
         }
         Sexpr::Symbol(ref key) => {
             let tail = args.tail().ok_or(Error::WrongArgNum)?;
-            let bindings = list_or_err(head_or_err(&tail)?)?;
+            let bindings = head_or_err(&tail).and_then(list_or_err)?;
             let body = tail.tail().unwrap_or_default();
             named_let(key, bindings, &body, local)
         }
@@ -365,7 +356,7 @@ fn let_core(args: &Args, env: &mut Env) -> TcoResult {
 
 fn let_star(args: &Args, env: &mut Env) -> TcoResult {
     let local = &mut env.branch();
-    let bindings = list_or_err(head_or_err(args)?)?;
+    let bindings = head_or_err(args).and_then(list_or_err)?;
     let body = args.tail().unwrap_or_default();
     let_impl(bindings, &body, &mut local.clone(), local)
 }
@@ -373,7 +364,8 @@ fn let_star(args: &Args, env: &mut Env) -> TcoResult {
 #[inline]
 fn let_impl(bindings: &Args, body: &Args, call_env: &mut Env, eval_env: &mut Env) -> TcoResult {
     bindings.iter().try_for_each(|elem| {
-        eval_and_bind(list_or_err(elem)?, call_env, eval_env)?;
+        let binding = list_or_err(elem)?;
+        eval_and_bind(binding, call_env, eval_env)?;
         Ok(())
     })?;
     eval_but_last(body, eval_env)
@@ -385,7 +377,10 @@ fn named_let(key: &String, bindings: &Args, body: &Args, env: &mut Env) -> TcoRe
 
     let vars: Result<Vec<String>, Error<Sexpr>> = bindings
         .iter()
-        .map(|elem| eval_and_bind(list_or_err(elem)?, env, &mut local.clone()))
+        .map(|elem| {
+            let binding = list_or_err(elem)?;
+            eval_and_bind(binding, env, local)
+        })
         .collect();
     let lambda = Sexpr::lambda(vars?, body.clone(), env.clone());
     env.insert(key, lambda);
@@ -482,15 +477,6 @@ fn to_float(args: &Args, env: &mut Env) -> FuncResult {
     }
 }
 
-#[inline]
-fn stringify(args: &Args, env: &mut Env) -> Result<String, Error<Sexpr>> {
-    let iter = &mut eval_iter(args, env);
-    let string: Result<Vec<String>, Error<Sexpr>> = iter
-        .map(|elem| elem.map(|sexpr| sexpr.to_string()))
-        .collect();
-    Ok(string?.join(" "))
-}
-
 fn to_string(args: &Args, env: &mut Env) -> FuncResult {
     stringify(args, env).map(Sexpr::String)
 }
@@ -530,8 +516,7 @@ fn load(args: &Args, env: &mut Env) -> FuncResult {
 }
 
 fn reverse(args: &Args, env: &mut Env) -> FuncResult {
-    let arg = head_or_err(args)?;
-    let arg = eval(arg, env)?;
+    let arg = head_or_err(args).and_then(|arg| eval(arg, env))?;
     let list = list_or_err(&arg)?;
     let mut out = List::empty();
     for elem in list.iter() {
@@ -540,18 +525,29 @@ fn reverse(args: &Args, env: &mut Env) -> FuncResult {
     Ok(Sexpr::List(out))
 }
 
+// Utils
+
+#[inline]
+fn stringify(args: &Args, env: &mut Env) -> Result<String, Error<Sexpr>> {
+    let iter = &mut eval_iter(args, env);
+    let string: Result<Vec<String>, Error<Sexpr>> = iter
+        .map(|elem| elem.map(|sexpr| sexpr.to_string()))
+        .collect();
+    Ok(string?.join(" "))
+}
+
 #[inline]
 fn list_or_err(sexpr: &Sexpr) -> Result<&List<Sexpr>, Error<Sexpr>> {
     match sexpr {
-        Sexpr::List(ref list) => Ok(list),
+        Sexpr::List(list) => Ok(list),
         sexpr => Err(Error::WrongArg(sexpr.clone())),
     }
 }
 
 #[inline]
-fn symbol_name_or_err(sexpr: &Sexpr) -> Result<&String, Error<Sexpr>> {
+fn symbol_or_err(sexpr: &Sexpr) -> Result<&String, Error<Sexpr>> {
     match sexpr {
-        Sexpr::Symbol(ref name) => Ok(name),
+        Sexpr::Symbol(name) => Ok(name),
         sexpr => Err(Error::WrongArg(sexpr.clone())),
     }
 }
@@ -564,6 +560,15 @@ fn head_or_err(args: &Args) -> Result<&Sexpr, Error<Sexpr>> {
 #[inline]
 fn eval_iter<'a>(args: &'a List<Sexpr>, env: &'a mut Env) -> impl Iterator<Item = FuncResult> + 'a {
     args.iter().map(|elem| eval(elem, env))
+}
+
+/// Evaluate first argument, raise error if more arguments were passed
+#[inline]
+fn eval_one_arg(args: &Args, env: &mut Env) -> FuncResult {
+    if args.has_next() {
+        return Err(Error::WrongArgNum);
+    }
+    head_or_err(args).and_then(|sexpr| eval(sexpr, env))
 }
 
 #[cfg(test)]

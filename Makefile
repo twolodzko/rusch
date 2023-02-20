@@ -26,7 +26,7 @@ integration-test:
 .PHONY: benchmark
 benchmark: rusch
 	cd examples/the-little-schemer/ && \
-		hyperfine -m 500 --warmup 10 \
+		hyperfine -m 200 --warmup 10 \
 			'../../rusch run-all.scm' \
 			'loco run-all.scm' \
 			'gosch run-all.scm'

@@ -15,18 +15,16 @@ pub fn quote(args: &Args, _env: &mut Env) -> FuncResult {
 }
 
 pub fn car(args: &Args, env: &mut Env) -> FuncResult {
-    let arg = eval_one_arg(args, env)?;
-    let list = list_or_err(&arg)?;
+    let list = eval_one_arg(args, env).and_then(|ref arg| list_or_err(arg).cloned())?;
     list.head()
         .cloned()
-        .ok_or_else(|| Error::WrongArg(Sexpr::List(list.clone())))
+        .ok_or_else(|| Error::WrongArg(Sexpr::List(list)))
 }
 
 pub fn cdr(args: &Args, env: &mut Env) -> FuncResult {
-    let arg = eval_one_arg(args, env)?;
-    let list = list_or_err(&arg)?;
+    let list = eval_one_arg(args, env).and_then(|ref arg| list_or_err(arg).cloned())?;
     if list.is_empty() {
-        return Err(Error::WrongArg(Sexpr::List(list.clone())));
+        return Err(Error::WrongArg(Sexpr::List(list)));
     };
     Ok(Sexpr::List(list.tail_or_empty()))
 }
@@ -62,7 +60,7 @@ pub fn lambda(args: &Args, env: &mut Env) -> FuncResult {
 pub fn lambda_init(vars: &List<Sexpr>, body: &List<Sexpr>, env: &mut Env) -> FuncResult {
     let vars: Result<Vec<String>, Error<Sexpr>> = vars
         .iter()
-        .map(|elem| Ok(symbol_or_err(elem)?.clone()))
+        .map(|elem| symbol_or_err(elem).cloned())
         .collect();
     Ok(Sexpr::lambda(vars?, body.clone(), env.clone()))
 }
@@ -464,13 +462,9 @@ pub fn load(args: &Args, env: &mut Env) -> FuncResult {
 }
 
 pub fn reverse(args: &Args, env: &mut Env) -> FuncResult {
-    let arg = head_or_err(args).and_then(|arg| eval(arg, env))?;
-    let list = list_or_err(&arg)?;
-    let mut out = List::empty();
-    for elem in list.iter() {
-        out = out.push_front(elem.clone())
-    }
-    Ok(Sexpr::List(out))
+    eval_one_arg(args, env)
+        .and_then(|ref elem| list_or_err(elem).cloned())
+        .map(|list| Sexpr::List(list.rev()))
 }
 
 // Utils

@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::{fmt, ops};
 
-use crate::envir::Env;
+use crate::envir;
 use crate::errors::Error;
 use crate::list::List;
 
@@ -20,17 +20,20 @@ pub enum Sexpr {
     Nil,
 }
 
-pub type FuncResult = Result<Sexpr, Error<Sexpr>>;
-pub type Func = fn(&List<Sexpr>, &mut Env<Sexpr>) -> FuncResult;
+pub type Args = List<Sexpr>;
+pub type Env = envir::Env<Sexpr>;
 
-pub type TcoResult = Result<(Sexpr, Option<Env<Sexpr>>), Error<Sexpr>>;
-pub type TcoFunc = fn(&List<Sexpr>, &mut Env<Sexpr>) -> TcoResult;
+pub type FuncResult = Result<Sexpr, Error<Sexpr>>;
+pub type Func = fn(&Args, &mut Env) -> FuncResult;
+
+pub type TcoResult = Result<(Sexpr, Option<Env>), Error<Sexpr>>;
+pub type TcoFunc = fn(&Args, &mut Env) -> TcoResult;
 
 #[derive(Clone, PartialEq)]
 pub struct Lambda {
     pub vars: Vec<String>,
     pub body: List<Sexpr>,
-    pub env: Env<Sexpr>,
+    pub env: Env,
 }
 
 impl Sexpr {
@@ -45,7 +48,7 @@ impl Sexpr {
     }
 
     #[inline]
-    pub fn lambda(vars: Vec<String>, body: List<Sexpr>, env: Env<Sexpr>) -> Self {
+    pub fn lambda(vars: Vec<String>, body: List<Sexpr>, env: Env) -> Self {
         Sexpr::Lambda(Box::new(Lambda { vars, body, env }))
     }
 

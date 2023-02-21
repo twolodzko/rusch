@@ -1,12 +1,9 @@
-use crate::envir;
 use crate::errors::{Error, ReadError};
 use crate::io::FileReader;
-use crate::list::List;
 use crate::parser::read_sexpr;
-use crate::types::{Lambda, Sexpr, TcoResult};
+use crate::types::{Args, Env, Lambda, Sexpr, TcoResult};
 
 type EvalResult = Result<Sexpr, Error<Sexpr>>;
-type Env = envir::Env<Sexpr>;
 
 pub fn eval(sexpr: &Sexpr, env: &mut Env) -> EvalResult {
     let mut sexpr = sexpr.clone();
@@ -27,7 +24,7 @@ pub fn eval(sexpr: &Sexpr, env: &mut Env) -> EvalResult {
 }
 
 #[inline]
-fn eval_list(list: &List<Sexpr>, env: &mut Env) -> TcoResult {
+fn eval_list(list: &Args, env: &mut Env) -> TcoResult {
     let head = match list.head() {
         Some(head) => head,
         None => return Ok((Sexpr::null(), None)),
@@ -46,7 +43,7 @@ fn eval_list(list: &List<Sexpr>, env: &mut Env) -> TcoResult {
 
 /// Evaluate all the elements of the list but last, return last element unevaluated
 #[inline]
-pub fn eval_but_last(args: &List<Sexpr>, env: &mut Env) -> TcoResult {
+pub fn eval_but_last(args: &Args, env: &mut Env) -> TcoResult {
     let iter = &mut args.iter();
     let mut last = iter.next().unwrap_or(&Sexpr::Nil);
     for elem in iter {
@@ -71,7 +68,7 @@ pub fn eval_file(filename: &str, env: &mut Env) -> EvalResult {
 }
 
 impl Lambda {
-    fn call(&self, args: &List<Sexpr>, env: &mut Env) -> TcoResult {
+    fn call(&self, args: &Args, env: &mut Env) -> TcoResult {
         let local = &mut self.env.branch();
         let vars = &mut self.vars.iter();
         let args = &mut args.iter();

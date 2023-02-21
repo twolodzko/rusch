@@ -3,7 +3,7 @@ use crate::list::List;
 use crate::reader::Reader;
 use crate::types::Sexpr;
 
-/// Read a single S-expression from a string
+/// Read a single S-expression using the reader
 pub fn read_sexpr(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
     skip_whitespace(r)?;
     let c = r.peek()?;

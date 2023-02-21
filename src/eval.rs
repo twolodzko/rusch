@@ -1,11 +1,9 @@
 use crate::errors::{Error, ReadError};
 use crate::parser::read_sexpr;
 use crate::reader::FileReader;
-use crate::types::{Args, Env, Lambda, Sexpr, TcoResult};
+use crate::types::{Args, Env, FuncResult, Lambda, Sexpr, TcoResult};
 
-type EvalResult = Result<Sexpr, Error<Sexpr>>;
-
-pub fn eval(sexpr: &Sexpr, env: &mut Env) -> EvalResult {
+pub fn eval(sexpr: &Sexpr, env: &mut Env) -> FuncResult {
     let mut sexpr = sexpr.clone();
     let mut env = env.clone();
     loop {
@@ -53,7 +51,7 @@ pub fn eval_but_last(args: &Args, env: &mut Env) -> TcoResult {
     Ok((last.clone(), Some(env.clone())))
 }
 
-pub fn eval_file(filename: &str, env: &mut Env) -> EvalResult {
+pub fn eval_file(filename: &str, env: &mut Env) -> FuncResult {
     let mut reader = FileReader::from(filename).map_err(|msg| Error::ReadError(msg.to_string()))?;
 
     let mut last = Sexpr::Nil;

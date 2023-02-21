@@ -12,7 +12,7 @@ pub fn stringify(args: &Args, env: &mut Env) -> Result<String, Error<Sexpr>> {
     Ok(string.join(" "))
 }
 
-/// If `Sexpr` is a list, return enclosed list, otherwise throw an error
+/// If `sexpr` is a list, return enclosed list, otherwise throw an error
 #[inline]
 pub fn list_or_err(sexpr: &Sexpr) -> Result<&List<Sexpr>, Error<Sexpr>> {
     match sexpr {
@@ -21,7 +21,7 @@ pub fn list_or_err(sexpr: &Sexpr) -> Result<&List<Sexpr>, Error<Sexpr>> {
     }
 }
 
-/// If `Sexpr` is a symbol, return it's name, otherwise throw an error
+/// If `sexpr` is a symbol, return it's name, otherwise throw an error
 #[inline]
 pub fn symbol_or_err(sexpr: &Sexpr) -> Result<&String, Error<Sexpr>> {
     match sexpr {
@@ -54,6 +54,10 @@ pub fn eval_one_arg(args: &Args, env: &mut Env) -> FuncResult {
     head_or_err(args).and_then(|sexpr| eval(sexpr, env))
 }
 
+/// Fold the list
+/// - when `args` is empty, return `init`
+/// - when there is single element in `args`, return `func(init, arg)`
+/// - for more elements, fold the list with `func(acc, arg)`
 #[inline]
 pub fn list_reduce(
     args: &Args,
@@ -72,6 +76,7 @@ pub fn list_reduce(
     iter.try_fold(acc, |acc, x| func(acc, x?))
 }
 
+/// Use `partial_cmp` to compare subsequent values
 #[inline]
 pub fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
     let iter = &mut eval_iter(args, env);

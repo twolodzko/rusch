@@ -30,7 +30,7 @@ condition always evaluating to `#t`, e.g. `(cond (else 'yay))`.
 `(+ 2 2)` list.
 - `(eq? obj1 obj2)` compares if two objects are equal, `equal?` is just an alias for it.
 - Logical `(not obj)`, `and`, and `or`, e.g. `(and obj1 obj2 ...)`.
-- Arithmetic operators `+`, `-`, `*`, `/`, e.g. `(+ x1 x2 ...)`.
+- Arithmetic operators `+`, `-`, `*`, `/`, e.g. `(+ x1 x2 ...)`, and `%` for remainder [as defined in Rust].
   Those procedures promote integers to floats if any of the arguments is a float. Division `/` always promotes arguments
   to floats, for integer division use `//`.
 - Numerical comparison operators `<`, `=`, `>`, e.g. `(< x1 x2 ...)`.
@@ -50,3 +50,4 @@ The design of this implementation is similar to [the one in Go] and it was descr
  [lambda expression]: https://www.cs.cmu.edu/Groups/AI/html/r4rs/r4rs_6.html#SEC30
  [it is not the same]: https://stackoverflow.com/questions/34984552/what-is-the-difference-between-quote-and-list
  [disjoint types]: https://www.cs.cmu.edu/Groups/AI/html/r4rs/r4rs_5.html#SEC23
+ [as defined in Rust]: https://stackoverflow.com/questions/31210357/is-there-a-modulus-not-remainder-function-operation

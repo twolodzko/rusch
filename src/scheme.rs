@@ -16,6 +16,7 @@ pub fn root_env() -> Env {
         ("*", Func(mul)),
         ("/", Func(div)),
         ("//", Func(int_div)),
+        ("%", Func(rem)),
         ("+", Func(add)),
         ("<", Func(lt)),
         ("=", Func(equal)),

@@ -66,6 +66,15 @@ pub fn div(args: &Args, env: &mut Env) -> FuncResult {
     list_reduce(args, env, Sexpr::Integer(1), |x, y| x / y)
 }
 
+pub fn rem(args: &Args, env: &mut Env) -> FuncResult {
+    if !args.has_next() {
+        return Err(Error::WrongArgNum);
+    }
+    eval_iter(args, env)
+        .reduce(|acc, elem| acc.and_then(|x| x % elem?))
+        .unwrap_or(Err(Error::WrongArgNum))
+}
+
 pub fn int_div(args: &Args, env: &mut Env) -> FuncResult {
     #[inline]
     fn divide(x: Sexpr, y: Sexpr) -> FuncResult {

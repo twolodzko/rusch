@@ -10,6 +10,7 @@ pub enum Error<T> {
     CannotParse(T),
     Custom(String),
     ReadError(String),
+    Undefined,
 }
 
 impl<T> Error<T> {
@@ -33,6 +34,7 @@ where
             CannotParse(obj) => write!(f, "{} could not be parsed", obj),
             Custom(msg) => msg.fmt(f),
             ReadError(msg) => msg.fmt(f),
+            Undefined => write!(f, "undefined result"),
         }
     }
 }

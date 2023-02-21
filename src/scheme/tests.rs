@@ -202,6 +202,28 @@ fn div() {
 }
 
 #[test]
+fn rem() {
+    use Sexpr::{Float, Integer};
+
+    // basics
+    assert_eval_eq!("(% 4 2)", Ok(Integer(0)));
+    assert_eval_eq!("(% '7 3)", Ok(Integer(1)));
+    assert_eval_eq!("(% 104 5 3)", Ok(Integer(1)));
+
+    // floats & casts
+    assert_eval_eq!("(% 5.0  2.0 )", Ok(Float(1.0)));
+    assert_eval_eq!("(%  5   2.0 )", Ok(Float(1.0)));
+    assert_eval_eq!("(% 5.0   2  )", Ok(Float(1.0)));
+
+    // errors
+    assert_eval_eq!("(%)", Err(Error::WrongArgNum));
+    assert_eval_eq!("(% 1)", Err(Error::WrongArgNum));
+    assert_eval_eq!("(% 1 'foo)", Err(Error::NotANumber(Sexpr::symbol("foo"))));
+    assert_eval_eq!("(% \"1\" 2 3 4)", Err(Error::NotANumber(Sexpr::from("1"))));
+    assert_eval_eq!("(% 5 0)", Err(Error::Undefined));
+}
+
+#[test]
 fn int_div() {
     use Sexpr::Integer;
 

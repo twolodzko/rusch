@@ -1,6 +1,6 @@
 use crate::errors::{Error, ReadError};
-use crate::io::FileReader;
 use crate::parser::read_sexpr;
+use crate::reader::FileReader;
 use crate::types::{Args, Env, Lambda, Sexpr, TcoResult};
 
 type EvalResult = Result<Sexpr, Error<Sexpr>>;

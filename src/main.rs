@@ -2,8 +2,8 @@ use std::env;
 
 use rusch::envir::Env;
 use rusch::eval::{eval, eval_file};
-use rusch::io::StdinReader;
 use rusch::parser::read_sexpr;
+use rusch::reader::StdinReader;
 use rusch::scheme::root_env;
 use rusch::types::Sexpr;
 

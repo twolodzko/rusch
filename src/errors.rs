@@ -41,7 +41,7 @@ where
 pub enum ReadError {
     EndOfInput,
     Unexpected(char),
-    Missing(char),
+    Missing(String),
     IoError(String),
 }
 
@@ -51,7 +51,7 @@ impl fmt::Display for ReadError {
         match self {
             EndOfInput => write!(f, "end of input"),
             Unexpected(ch) => write!(f, "unexpected character '{}'", ch),
-            Missing(ch) => write!(f, "missing '{}'", ch),
+            Missing(msg) => write!(f, "missing {}", msg),
             IoError(msg) => msg.fmt(f),
         }
     }

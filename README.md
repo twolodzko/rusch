@@ -28,7 +28,7 @@ condition always evaluating to `#t`, e.g. `(cond (else 'yay))`.
   [it is not the same] as `list`. 
 - `(eval expr)` does the opposite to `quote` by evaluating *expr*, e.g. `(eval '(+ 2 2))` returns `4` rather than the
 `(+ 2 2)` list.
-- `(eq? obj1 obj2)` compares if two objects are equal, for pairs only checks if they point to the same memory location.
+- `(eq? obj1 obj2)` compares if two objects are equal, `equal?` is just an alias for it.
 - Logical `(not obj)`, `and`, and `or`, e.g. `(and obj1 obj2 ...)`.
 - Arithmetic operators `+`, `-`, `*`, `/`, e.g. `(+ x1 x2 ...)`.
   Those procedures promote integers to floats if any of the arguments is a float. Division `/` always promotes arguments
@@ -38,7 +38,8 @@ condition always evaluating to `#t`, e.g. `(cond (else 'yay))`.
   other checkers: `integer?`, `float?`, `null?` (empty list) and `nil?` (null value).
 - `->int` and `->float` transformations from any numeric types to integers and floats.
 - `(string expr ...)` converts *expr*s to string, `(display expr ...)` prints them,
-  and `(error expr ...)` raises exceptions with *expr*s as a message. 
+  and `(error expr ...)` raises exceptions with *expr*s as a message.
+- `reverse` can be used to reverse a list.
 
 Comments begin with `;` and everything that follows, from the semicolon until the end of the line, is ignored.
 

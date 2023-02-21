@@ -8,11 +8,11 @@ pub fn read_sexpr(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
     skip_whitespace(r)?;
     let c = r.peek()?;
     match c {
-        '(' => {
+        '(' | '[' => {
             r.next()?;
             read_list(r)
         }
-        ')' => {
+        ')' | ']' => {
             r.next()?; // needed so that REPL does not go into infinite loop
             Err(ReadError::Unexpected(c))
         }
@@ -76,15 +76,20 @@ fn read_word(r: &mut impl Reader) -> Result<String, ReadError> {
 }
 
 #[inline]
+fn is_special(c: char) -> bool {
+    matches!(c, '(' | ')' | '[' | ']' | '\'' | ',' | '`' | '"' | ';')
+}
+
+#[inline]
 fn is_word_boundary(c: char) -> bool {
-    c.is_whitespace() || matches!(c, '(' | ')' | '\'' | ',' | '"' | ';')
+    c.is_whitespace() || is_special(c)
 }
 
 fn read_string(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
     let mut chars: Vec<char> = vec![];
     loop {
         match r.next() {
-            Err(ReadError::EndOfInput) => return Err(ReadError::Missing('"')),
+            Err(ReadError::EndOfInput) => return Err(ReadError::Missing(String::from("\""))),
             Ok('"') => break,
             Ok('\\') => todo!(),
             Ok(c) => chars.push(c),
@@ -101,12 +106,14 @@ fn read_list(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
         skip_whitespace(r)?;
 
         match r.peek() {
-            Ok(')') => {
+            Ok(')') | Ok(']') => {
                 r.next()?;
                 break;
             }
             Ok(_) => (),
-            Err(ReadError::EndOfInput) => return Err(ReadError::Missing(')')),
+            Err(ReadError::EndOfInput) => {
+                return Err(ReadError::Missing(String::from("closing bracket")))
+            }
             Err(msg) => return Err(msg),
         }
 
@@ -284,9 +291,35 @@ mod tests {
     }
 
     #[test]
+    fn list_with_square_brackets() {
+        let mut r = StringReader::from("[(1) [1 2] [1 2 3]]");
+        assert_eq!(
+            read_sexpr(&mut r),
+            Ok(Sexpr::from(vec![
+                Sexpr::from(vec![Sexpr::Integer(1)]),
+                Sexpr::from(vec![Sexpr::Integer(1), Sexpr::Integer(2)]),
+                Sexpr::from(vec![
+                    Sexpr::Integer(1),
+                    Sexpr::Integer(2),
+                    Sexpr::Integer(3),
+                ])
+            ]))
+        );
+    }
+
+    #[test]
     fn unclosed_list() {
         let mut r = StringReader::from("(1 2 3");
-        assert_eq!(read_sexpr(&mut r), Err(ReadError::Missing(')')));
+        assert_eq!(
+            read_sexpr(&mut r),
+            Err(ReadError::Missing(String::from("closing bracket")))
+        );
+
+        let mut r = StringReader::from("[1 2 3");
+        assert_eq!(
+            read_sexpr(&mut r),
+            Err(ReadError::Missing(String::from("closing bracket")))
+        );
     }
 
     #[test]

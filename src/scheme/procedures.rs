@@ -66,6 +66,26 @@ pub fn div(args: &Args, env: &mut Env) -> FuncResult {
     list_reduce(args, env, Sexpr::Integer(1), |x, y| x / y)
 }
 
+pub fn int_div(args: &Args, env: &mut Env) -> FuncResult {
+    #[inline]
+    fn divide(x: Sexpr, y: Sexpr) -> FuncResult {
+        use Sexpr::{Float, Integer};
+        match (x, y) {
+            (Integer(x), Integer(y)) => Ok(Integer(x / y)),
+            (Integer(x), Float(y)) => Ok(Integer(x / y as i64)),
+            (Float(x), Integer(y)) => Ok(Integer(x as i64 / y)),
+            (Float(x), Float(y)) => Ok(Integer(x as i64 / y as i64)),
+            (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
+            (x, _) => Err(Error::NotANumber(x)),
+        }
+    }
+
+    if args.is_empty() {
+        return Err(Error::WrongArgNum);
+    }
+    list_reduce(args, env, Sexpr::Integer(1), divide)
+}
+
 pub fn equal(args: &Args, env: &mut Env) -> FuncResult {
     let iter = &mut eval_iter(args, env);
 

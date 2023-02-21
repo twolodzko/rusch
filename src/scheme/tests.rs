@@ -202,6 +202,28 @@ fn div() {
 }
 
 #[test]
+fn int_div() {
+    use Sexpr::Integer;
+
+    // basics
+    assert_eval_eq!("(// 2)", Ok(Integer(0)));
+    assert_eval_eq!("(// '9 3)", Ok(Integer(3)));
+    assert_eval_eq!("(// (+ 5 5) 3)", Ok(Integer(3)));
+    assert_eval_eq!("(// 30 10 3)", Ok(Integer(1)));
+    assert_eval_eq!("(// 300 (// 12 4) (// 500 5 10))", Ok(Integer(10)));
+
+    // // floats & casts
+    assert_eval_eq!("(// 6.0  3.0 )", Ok(Integer(2)));
+    assert_eval_eq!("(//  6   3.0 )", Ok(Integer(2)));
+    assert_eval_eq!("(// 6.0   3  )", Ok(Integer(2)));
+
+    // errors
+    assert_eval_eq!("(//)", Err(Error::WrongArgNum));
+    assert_eval_eq!("(// 1 'foo)", Err(Error::NotANumber(Sexpr::symbol("foo"))));
+    assert_eval_eq!("(// \"1\" 2 3 4)", Err(Error::NotANumber(Sexpr::from("1"))));
+}
+
+#[test]
 fn is_equal() {
     use crate::types::Sexpr::{False, True};
 

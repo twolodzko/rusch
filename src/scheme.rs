@@ -15,6 +15,7 @@ pub fn root_env() -> Env {
         ("->integer", Func(to_integer)),
         ("*", Func(mul)),
         ("/", Func(div)),
+        ("//", Func(int_div)),
         ("+", Func(add)),
         ("<", Func(lt)),
         ("=", Func(equal)),

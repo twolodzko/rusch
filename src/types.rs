@@ -1,9 +1,7 @@
-use std::cmp::Ordering;
-use std::fmt;
-
 use crate::envir;
 use crate::errors::Error;
 use crate::list::List;
+use std::fmt;
 
 #[derive(Clone)]
 pub enum Sexpr {
@@ -56,11 +54,6 @@ impl Sexpr {
     pub fn is_true(&self) -> bool {
         // see: https://www.scheme.com/tspl4/intro.html#./intro:s36
         !matches!(self, Sexpr::False)
-    }
-
-    #[inline]
-    pub fn is_number(&self) -> bool {
-        matches!(self, Sexpr::Integer(_) | Sexpr::Float(_))
     }
 }
 
@@ -125,18 +118,6 @@ impl std::cmp::PartialEq for Sexpr {
             (Nil, Nil) => true,
             // non-matching types
             _ => false,
-        }
-    }
-}
-
-impl std::cmp::PartialOrd for Sexpr {
-    fn partial_cmp(&self, other: &Sexpr) -> Option<Ordering> {
-        match (self, other) {
-            (Sexpr::Integer(x), Sexpr::Integer(y)) => x.partial_cmp(y),
-            (Sexpr::Integer(x), Sexpr::Float(y)) => (*x as f64).partial_cmp(y),
-            (Sexpr::Float(x), Sexpr::Integer(y)) => x.partial_cmp(&(*y as f64)),
-            (Sexpr::Float(x), Sexpr::Float(y)) => x.partial_cmp(y),
-            _ => None,
         }
     }
 }

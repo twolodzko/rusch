@@ -1,74 +1,35 @@
+use std::cmp::Ordering;
+use std::ops;
+
 use super::utils::*;
 use crate::errors::Error;
 use crate::types::{Args, Env, FuncResult, Sexpr};
 
-macro_rules! math_op {
-    ( $op:tt, $lhs:expr, $rhs:expr ) => {
-        {
-            use Sexpr::{Float, Integer};
-            match ($lhs, $rhs) {
-                (Integer(x), Integer(y)) => Ok(Integer(x $op y)),
-                (Integer(x), Float(y)) => Ok(Float(x as f64 $op y)),
-                (Float(x), Integer(y)) => Ok(Float(x $op y as f64)),
-                (Float(x), Float(y)) => Ok(Float(x $op y)),
-                (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
-                (x, _) => Err(Error::NotANumber(x)),
-            }
-        }
-    };
-}
-
 pub fn add(args: &Args, env: &mut Env) -> FuncResult {
-    list_reduce(args, env, Sexpr::Integer(0), |x, y| math_op!(+, x, y))
+    list_reduce(args, env, Sexpr::Integer(0), |x, y| x + y)
 }
 
 pub fn sub(args: &Args, env: &mut Env) -> FuncResult {
-    list_reduce(args, env, Sexpr::Integer(0), |x, y| math_op!(-, x, y))
+    list_reduce(args, env, Sexpr::Integer(0), |x, y| x - y)
 }
 
 pub fn mul(args: &Args, env: &mut Env) -> FuncResult {
-    list_reduce(args, env, Sexpr::Integer(1), |x, y| math_op!(*, x, y))
+    list_reduce(args, env, Sexpr::Integer(1), |x, y| x * y)
 }
 
 pub fn div(args: &Args, env: &mut Env) -> FuncResult {
-    #[inline]
-    fn func(lhs: Sexpr, rhs: Sexpr) -> FuncResult {
-        use Sexpr::{Float, Integer};
-        match (lhs, rhs) {
-            (Integer(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x as f64 / y)),
-            (Integer(x), Float(y)) => y.non_zero().map(|y| Float(x as f64 / y)),
-            (Float(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x / y)),
-            (Float(x), Float(y)) => y.non_zero().map(|y| Float(x / y)),
-            (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
-            (x, _) => Err(Error::NotANumber(x)),
-        }
-    }
-
     if args.is_empty() {
         return Err(Error::WrongArgNum);
     }
-    list_reduce(args, env, Sexpr::Integer(1), func)
+    list_reduce(args, env, Sexpr::Integer(1), |x, y| x / y)
 }
 
 pub fn rem(args: &Args, env: &mut Env) -> FuncResult {
-    #[inline]
-    fn func(lhs: Sexpr, rhs: Sexpr) -> FuncResult {
-        use Sexpr::{Float, Integer};
-        match (lhs, rhs) {
-            (Integer(x), Integer(y)) => y.non_zero().map(|y| Integer(x % y)),
-            (Integer(x), Float(y)) => y.non_zero().map(|y| Float(x as f64 % y)),
-            (Float(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x % y)),
-            (Float(x), Float(y)) => y.non_zero().map(|y| Float(x % y)),
-            (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
-            (x, _) => Err(Error::NotANumber(x)),
-        }
-    }
-
     if !args.has_next() {
         return Err(Error::WrongArgNum);
     }
     eval_iter(args, env)
-        .reduce(|acc, elem| acc.and_then(|x| elem.and_then(|y| func(x, y))))
+        .reduce(|acc, elem| acc.and_then(|a| elem.and_then(|e| a % e)))
         .unwrap_or(Err(Error::WrongArgNum))
 }
 
@@ -147,6 +108,90 @@ pub fn is_float(args: &Args, env: &mut Env) -> FuncResult {
     )))
 }
 
+macro_rules! math_op {
+    ( $op:tt, $lhs:expr, $rhs:expr ) => {
+        {
+            use Sexpr::{Float, Integer};
+            match ($lhs, $rhs) {
+                (Integer(x), Integer(y)) => Ok(Integer(x $op y)),
+                (Integer(x), Float(y)) => Ok(Float(x as f64 $op y)),
+                (Float(x), Integer(y)) => Ok(Float(x $op y as f64)),
+                (Float(x), Float(y)) => Ok(Float(x $op y)),
+                (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
+                (x, _) => Err(Error::NotANumber(x)),
+            }
+        }
+    };
+}
+
+impl ops::Add<Sexpr> for Sexpr {
+    type Output = FuncResult;
+
+    fn add(self, rhs: Sexpr) -> Self::Output {
+        math_op!(+, self, rhs)
+    }
+}
+
+impl ops::Sub<Sexpr> for Sexpr {
+    type Output = FuncResult;
+
+    fn sub(self, rhs: Sexpr) -> Self::Output {
+        math_op!(-, self, rhs)
+    }
+}
+
+impl ops::Mul<Sexpr> for Sexpr {
+    type Output = FuncResult;
+
+    fn mul(self, rhs: Sexpr) -> Self::Output {
+        math_op!(*, self, rhs)
+    }
+}
+
+impl ops::Div<Sexpr> for Sexpr {
+    type Output = FuncResult;
+
+    fn div(self, rhs: Sexpr) -> Self::Output {
+        use Sexpr::{Float, Integer};
+        match (self, rhs) {
+            (Integer(x), Integer(y)) => Ok(Float(x as f64 / y as f64)),
+            (Integer(x), Float(y)) => Ok(Float(x as f64 / y)),
+            (Float(x), Integer(y)) => Ok(Float(x / y as f64)),
+            (Float(x), Float(y)) => Ok(Float(x / y)),
+            (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
+            (x, _) => Err(Error::NotANumber(x)),
+        }
+    }
+}
+
+impl ops::Rem<Sexpr> for Sexpr {
+    type Output = FuncResult;
+
+    fn rem(self, rhs: Sexpr) -> Self::Output {
+        use Sexpr::{Float, Integer};
+        match (self, rhs) {
+            (Integer(x), Integer(y)) => y.non_zero().map(|y| Integer(x % y)),
+            (Integer(x), Float(y)) => y.non_zero().map(|y| Float(x as f64 % y)),
+            (Float(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x % y)),
+            (Float(x), Float(y)) => y.non_zero().map(|y| Float(x % y)),
+            (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
+            (x, _) => Err(Error::NotANumber(x)),
+        }
+    }
+}
+
+impl std::cmp::PartialOrd for Sexpr {
+    fn partial_cmp(&self, other: &Sexpr) -> Option<Ordering> {
+        match (self, other) {
+            (Sexpr::Integer(x), Sexpr::Integer(y)) => x.partial_cmp(y),
+            (Sexpr::Integer(x), Sexpr::Float(y)) => (*x as f64).partial_cmp(y),
+            (Sexpr::Float(x), Sexpr::Integer(y)) => x.partial_cmp(&(*y as f64)),
+            (Sexpr::Float(x), Sexpr::Float(y)) => x.partial_cmp(y),
+            _ => None,
+        }
+    }
+}
+
 trait NonZero<T> {
     fn non_zero(self) -> Result<T, Error<Sexpr>>;
 }
@@ -168,5 +213,97 @@ impl NonZero<f64> for f64 {
             return Err(Error::Undefined);
         }
         Ok(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Sexpr;
+
+    #[test]
+    fn math() {
+        use crate::errors::Error;
+        use Sexpr::{Float, Integer};
+
+        assert_eq!(Integer(2) + Integer(2), Ok(Integer(4)));
+        assert_eq!(Integer(2) + Float(2.0), Ok(Float(4.0)));
+        assert_eq!(Float(2.0) + Integer(2), Ok(Float(4.0)));
+        assert_eq!(Float(2.0) + Float(2.0), Ok(Float(4.0)));
+        assert_eq!(
+            Float(2.0) + Sexpr::True,
+            Err(Error::NotANumber(Sexpr::True))
+        );
+        assert_eq!(
+            Sexpr::True + Float(2.0),
+            Err(Error::NotANumber(Sexpr::True))
+        );
+
+        assert_eq!(Integer(2) - Integer(1), Ok(Integer(1)));
+        assert_eq!(Integer(2) - Float(1.0), Ok(Float(1.0)));
+        assert_eq!(Float(2.0) - Integer(1), Ok(Float(1.0)));
+        assert_eq!(Float(2.0) - Float(1.0), Ok(Float(1.0)));
+        assert_eq!(
+            Float(2.0) - Sexpr::True,
+            Err(Error::NotANumber(Sexpr::True))
+        );
+        assert_eq!(
+            Sexpr::True - Float(2.0),
+            Err(Error::NotANumber(Sexpr::True))
+        );
+
+        assert_eq!(Integer(2) * Integer(2), Ok(Integer(4)));
+        assert_eq!(Integer(2) * Float(2.0), Ok(Float(4.0)));
+        assert_eq!(Float(2.0) * Integer(2), Ok(Float(4.0)));
+        assert_eq!(Float(2.0) * Float(2.0), Ok(Float(4.0)));
+        assert_eq!(
+            Float(2.0) * Sexpr::True,
+            Err(Error::NotANumber(Sexpr::True))
+        );
+        assert_eq!(
+            Sexpr::True * Float(2.0),
+            Err(Error::NotANumber(Sexpr::True))
+        );
+
+        assert_eq!(Integer(4) / Integer(2), Ok(Float(2.0)));
+        assert_eq!(Integer(4) / Float(2.0), Ok(Float(2.0)));
+        assert_eq!(Float(4.0) / Integer(2), Ok(Float(2.0)));
+        assert_eq!(Float(4.0) / Float(2.0), Ok(Float(2.0)));
+        assert_eq!(
+            Float(4.0) / Sexpr::True,
+            Err(Error::NotANumber(Sexpr::True))
+        );
+        assert_eq!(
+            Sexpr::True / Float(4.0),
+            Err(Error::NotANumber(Sexpr::True))
+        );
+
+        assert_eq!(Integer(5) % Integer(2), Ok(Integer(1)));
+        assert_eq!(Integer(5) % Float(2.0), Ok(Float(1.0)));
+        assert_eq!(Float(5.0) % Integer(2), Ok(Float(1.0)));
+        assert_eq!(Float(5.0) % Float(2.0), Ok(Float(1.0)));
+        assert_eq!(Integer(5) % Integer(0), Err(Error::Undefined));
+        assert_eq!(Integer(5) % Float(0.0), Err(Error::Undefined));
+        assert_eq!(Float(5.0) % Integer(0), Err(Error::Undefined));
+        assert_eq!(Float(5.0) % Float(0.0), Err(Error::Undefined));
+        assert_eq!(
+            Float(5.0) % Sexpr::True,
+            Err(Error::NotANumber(Sexpr::True))
+        );
+        assert_eq!(
+            Sexpr::True % Float(5.0),
+            Err(Error::NotANumber(Sexpr::True))
+        );
+    }
+
+    #[test]
+    fn comparisons() {
+        use Sexpr::*;
+
+        assert!(Integer(2) > Integer(1));
+        assert!(Integer(2) >= Integer(1));
+        assert!(Float(2.0) > Integer(1));
+        assert!(Integer(2) > Float(1.0));
+        assert!(Integer(1) < Integer(2));
+        assert!(Integer(100) <= Integer(200));
     }
 }

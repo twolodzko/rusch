@@ -108,6 +108,51 @@ pub fn is_float(args: &Args, env: &mut Env) -> FuncResult {
     )))
 }
 
+/// Fold the list
+/// - when `args` is empty, return `init`
+/// - when there is single element in `args`, return `func(init, arg)`
+/// - for more elements, fold the list with `func(acc, arg)`
+#[inline]
+fn list_reduce(
+    args: &Args,
+    env: &mut Env,
+    init: Sexpr,
+    func: impl Fn(Sexpr, Sexpr) -> FuncResult,
+) -> FuncResult {
+    let iter = &mut eval_iter(args, env);
+    let acc = match iter.next() {
+        Some(sexpr) => sexpr?,
+        None => return Ok(init),
+    };
+    if !args.has_next() {
+        return func(init, acc);
+    }
+    iter.try_fold(acc, |acc, x| func(acc, x?))
+}
+
+/// Use `partial_cmp` to compare subsequent values
+#[inline]
+fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
+    let iter = &mut eval_iter(args, env);
+
+    let mut prev = match iter.next() {
+        Some(sexpr) => sexpr?,
+        None => return Ok(Sexpr::True),
+    };
+
+    for elem in &mut *iter {
+        let elem = elem?;
+        let cmp = prev
+            .partial_cmp(&elem)
+            .ok_or_else(|| Error::NotANumber(elem.clone()))?;
+        if cmp != order {
+            return Ok(Sexpr::False);
+        }
+        prev = elem
+    }
+    Ok(Sexpr::True)
+}
+
 macro_rules! math_op {
     ( $op:tt, $lhs:expr, $rhs:expr ) => {
         {
@@ -305,5 +350,10 @@ mod tests {
         assert!(Integer(2) > Float(1.0));
         assert!(Integer(1) < Integer(2));
         assert!(Integer(100) <= Integer(200));
+
+        assert_eq!(Sexpr::True.partial_cmp(&Float(5.0)), None);
+        assert_eq!(Float(5.0).partial_cmp(&Sexpr::True), None);
+        assert_eq!(Sexpr::True.partial_cmp(&Integer(1)), None);
+        assert_eq!(Integer(1).partial_cmp(&Sexpr::True), None);
     }
 }

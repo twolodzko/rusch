@@ -284,6 +284,8 @@ fn rem() {
     assert_eval_eq!("(% 1 'foo)", Err(Error::NotANumber(Sexpr::symbol("foo"))));
     assert_eval_eq!("(% \"1\" 2 3 4)", Err(Error::NotANumber(Sexpr::from("1"))));
     assert_eval_eq!("(% 5 0)", Err(Error::Undefined));
+    assert_eval_eq!("(% 5 0.0)", Err(Error::Undefined));
+    assert_eval_eq!("(% 5.0 0.0)", Err(Error::Undefined));
 }
 
 #[test]
@@ -306,6 +308,8 @@ fn int_div() {
     assert_eval_eq!("(//)", Err(Error::WrongArgNum));
     assert_eval_eq!("(// 1 'foo)", Err(Error::NotANumber(Sexpr::symbol("foo"))));
     assert_eval_eq!("(// \"1\" 2 3 4)", Err(Error::NotANumber(Sexpr::from("1"))));
+    assert_eval_eq!("(// 1 0)", Err(Error::Undefined));
+    assert_eval_eq!("(// 1 0.0)", Err(Error::Undefined));
 }
 
 #[test]

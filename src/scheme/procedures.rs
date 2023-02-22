@@ -1,7 +1,7 @@
 use super::utils::*;
 use crate::errors::Error;
 use crate::list::List;
-use crate::types::{Args, Env, FuncResult, Sexpr};
+use crate::types::{Args, Env, FuncResult, NonZero, Sexpr};
 
 pub fn car(args: &Args, env: &mut Env) -> FuncResult {
     let list = eval_one_arg(args, env).and_then(|ref arg| list_or_err(arg).cloned())?;
@@ -80,10 +80,10 @@ pub fn int_div(args: &Args, env: &mut Env) -> FuncResult {
     fn divide(x: Sexpr, y: Sexpr) -> FuncResult {
         use Sexpr::{Float, Integer};
         match (x, y) {
-            (Integer(x), Integer(y)) => Ok(Integer(x / y)),
-            (Integer(x), Float(y)) => Ok(Integer(x / y as i64)),
-            (Float(x), Integer(y)) => Ok(Integer(x as i64 / y)),
-            (Float(x), Float(y)) => Ok(Integer(x as i64 / y as i64)),
+            (Integer(x), Integer(y)) => y.non_zero().map(|y| Integer(x / y)),
+            (Integer(x), Float(y)) => (y as i64).non_zero().map(|y| Integer(x / y)),
+            (Float(x), Integer(y)) => y.non_zero().map(|y| Integer(x as i64 / y)),
+            (Float(x), Float(y)) => (y as i64).non_zero().map(|y| Integer(x as i64 / y)),
             (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
             (x, _) => Err(Error::NotANumber(x)),
         }

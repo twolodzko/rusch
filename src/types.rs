@@ -224,36 +224,40 @@ impl ops::Div<Sexpr> for Sexpr {
     }
 }
 
+pub trait NonZero<T> {
+    fn non_zero(self) -> Result<T, Error<Sexpr>>;
+}
+
+impl NonZero<i64> for i64 {
+    #[inline]
+    fn non_zero(self) -> Result<i64, Error<Sexpr>> {
+        if self == 0 {
+            return Err(Error::Undefined);
+        }
+        Ok(self)
+    }
+}
+
+impl NonZero<f64> for f64 {
+    #[inline]
+    fn non_zero(self) -> Result<f64, Error<Sexpr>> {
+        if self == 0.0 {
+            return Err(Error::Undefined);
+        }
+        Ok(self)
+    }
+}
+
 impl ops::Rem<Sexpr> for Sexpr {
     type Output = FuncResult;
 
     fn rem(self, rhs: Sexpr) -> Self::Output {
         use Sexpr::{Float, Integer};
         match (self, rhs) {
-            (Integer(x), Integer(y)) => {
-                if y == 0 {
-                    return Err(Error::Undefined);
-                }
-                Ok(Integer(x % y))
-            }
-            (Integer(x), Float(y)) => {
-                if y == 0.0 {
-                    return Err(Error::Undefined);
-                }
-                Ok(Float(x as f64 % y))
-            }
-            (Float(x), Integer(y)) => {
-                if y == 0 {
-                    return Err(Error::Undefined);
-                }
-                Ok(Float(x % y as f64))
-            }
-            (Float(x), Float(y)) => {
-                if y == 0.0 {
-                    return Err(Error::Undefined);
-                }
-                Ok(Float(x % y))
-            }
+            (Integer(x), Integer(y)) => y.non_zero().map(|y| Integer(x % y)),
+            (Integer(x), Float(y)) => y.non_zero().map(|y| Float(x as f64 % y)),
+            (Float(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x % y)),
+            (Float(x), Float(y)) => y.non_zero().map(|y| Float(x % y)),
             (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
             (x, _) => Err(Error::NotANumber(x)),
         }

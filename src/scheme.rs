@@ -1,6 +1,7 @@
 use crate::eval::eval_but_last;
 use crate::scheme::procedures::*;
 use crate::scheme::special_forms::*;
+use crate::scheme::utils::eval_one_arg;
 use crate::types::{Env, Sexpr};
 
 mod procedures;
@@ -49,12 +50,14 @@ pub fn root_env() -> Env {
         ("or", Func(orfn)),
         ("pair?", Func(is_pair)),
         ("procedure?", Func(is_procedure)),
+        ("quasiquote", Func(quasiquote)),
         ("quote", Func(quote)),
         ("reverse", Func(reverse)),
         ("set!", Func(set)),
         ("string?", Func(is_string)),
         ("string", Func(to_string)),
         ("symbol?", Func(is_symbol)),
+        ("unquote", Func(eval_one_arg)),
     ])
 }
 

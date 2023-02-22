@@ -18,7 +18,15 @@ pub fn read_sexpr(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
         }
         '\'' => {
             r.next()?;
-            read_quote(r)
+            read_special(r, "quote")
+        }
+        '`' => {
+            r.next()?;
+            read_special(r, "quasiquote")
+        }
+        ',' => {
+            r.next()?;
+            read_special(r, "unquote")
         }
         '"' => {
             r.next()?;
@@ -28,8 +36,6 @@ pub fn read_sexpr(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
             skip_line(r)?;
             read_sexpr(r)
         }
-        '`' => unimplemented!(),
-        ',' => unimplemented!(),
         _ => {
             let word = read_word(r)?;
             Ok(parse_word(word))
@@ -77,7 +83,7 @@ fn read_word(r: &mut impl Reader) -> Result<String, ReadError> {
 
 #[inline]
 fn is_special(c: char) -> bool {
-    matches!(c, '(' | ')' | '[' | ']' | '\'' | ',' | '`' | '"' | ';')
+    matches!(c, '(' | ')' | '[' | ']' | '\'' | '`' | ',' | '"' | ';')
 }
 
 #[inline]
@@ -123,11 +129,11 @@ fn read_list(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
     Ok(Sexpr::List(list.rev()))
 }
 
-fn read_quote(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
+fn read_special(r: &mut impl Reader, name: &str) -> Result<Sexpr, ReadError> {
     let mut list = List::empty();
     let obj = read_sexpr(r)?;
     list = list.push_front(obj);
-    list = list.push_front(Sexpr::symbol("quote"));
+    list = list.push_front(Sexpr::symbol(name));
     Ok(Sexpr::List(list))
 }
 
@@ -243,13 +249,43 @@ mod tests {
     }
 
     #[test]
-    fn quote() {
+    fn quotes() {
         let mut r = StringReader::from("'foo");
         assert_eq!(
             read_sexpr(&mut r),
             Ok(Sexpr::from(vec![
                 Sexpr::symbol("quote"),
                 Sexpr::symbol("foo")
+            ]))
+        );
+
+        let mut r = StringReader::from("`foo");
+        assert_eq!(
+            read_sexpr(&mut r),
+            Ok(Sexpr::from(vec![
+                Sexpr::symbol("quasiquote"),
+                Sexpr::symbol("foo")
+            ]))
+        );
+
+        let mut r = StringReader::from(",foo");
+        assert_eq!(
+            read_sexpr(&mut r),
+            Ok(Sexpr::from(vec![
+                Sexpr::symbol("unquote"),
+                Sexpr::symbol("foo")
+            ]))
+        );
+
+        let mut r = StringReader::from("`,'foo");
+        assert_eq!(
+            read_sexpr(&mut r),
+            Ok(Sexpr::from(vec![
+                Sexpr::symbol("quasiquote"),
+                Sexpr::from(vec![
+                    Sexpr::symbol("unquote"),
+                    Sexpr::from(vec![Sexpr::symbol("quote"), Sexpr::symbol("foo")])
+                ])
             ]))
         );
     }

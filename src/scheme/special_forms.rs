@@ -7,10 +7,34 @@ use crate::types::{Args, Env, FuncResult, Sexpr, TcoResult};
 // See: https://groups.csail.mit.edu/mac/ftpdir/scheme-7.4/doc-html/scheme_3.html
 
 pub fn quote(args: &Args, _env: &mut Env) -> FuncResult {
-    if args.has_next() {
-        return Err(Error::WrongArgNum);
+    one_arg_or_err(args).cloned()
+}
+
+pub fn quasiquote(args: &Args, env: &mut Env) -> FuncResult {
+    one_arg_or_err(args).and_then(|sexpr| qq_eval(sexpr, env, 1))
+}
+
+/// Evaluate quasiquoted expression
+fn qq_eval(sexpr: &Sexpr, env: &mut Env, quotes: i32) -> FuncResult {
+    let quotes = &mut quotes.clone();
+
+    let list = match sexpr {
+        Sexpr::List(list) => list,
+        _ => return Ok(sexpr.clone()),
+    };
+    if let Some(Sexpr::Symbol(name)) = list.head() {
+        if name == &String::from("unquote") {
+            *quotes -= 1
+        } else if name == &String::from("quasiquote") {
+            *quotes += 1
+        }
+    };
+    if *quotes == 0 {
+        return eval(sexpr, env);
     }
-    head_or_err(args).cloned()
+    list.iter()
+        .map(|elem| qq_eval(elem, env, *quotes))
+        .collect()
 }
 
 pub fn lambda(args: &Args, env: &mut Env) -> FuncResult {
@@ -56,29 +80,29 @@ pub fn condfn(args: &Args, env: &mut Env) -> TcoResult {
 
 pub fn define(args: &Args, env: &mut Env) -> FuncResult {
     #[inline]
-    fn from_symbol(key: &String, rhs: &List<Sexpr>, env: &mut Env) -> FuncResult {
-        if rhs.has_next() {
+    fn from_symbol(key: &String, rest: &List<Sexpr>, env: &mut Env) -> FuncResult {
+        if rest.has_next() {
             return Err(Error::WrongArgNum);
         }
-        let sexpr = rhs.head().unwrap();
+        let sexpr = rest.head().unwrap();
         let val = eval(sexpr, env)?;
         env.insert(key, val);
         Ok(Sexpr::Nil)
     }
 
     #[inline]
-    fn from_list(list: &List<Sexpr>, rhs: &List<Sexpr>, env: &mut Env) -> FuncResult {
+    fn from_list(list: &List<Sexpr>, rest: &List<Sexpr>, env: &mut Env) -> FuncResult {
         let key = head_or_err(list).and_then(symbol_or_err)?;
         let vars = list.tail_or_empty();
-        let lambda = lambda_init(&vars, rhs, env)?;
+        let lambda = lambda_init(&vars, rest, env)?;
         env.insert(key, lambda);
         Ok(Sexpr::Nil)
     }
 
-    let rhs = args.tail().ok_or(Error::WrongArgNum)?;
+    let rest = args.tail().ok_or(Error::WrongArgNum)?;
     match head_or_err(args)? {
-        Sexpr::Symbol(key) => from_symbol(key, &rhs, env),
-        Sexpr::List(list) => from_list(list, &rhs, env),
+        Sexpr::Symbol(key) => from_symbol(key, &rest, env),
+        Sexpr::List(list) => from_list(list, &rest, env),
         sexpr => Err(Error::WrongArg(sexpr.clone())),
     }
 }
@@ -181,11 +205,7 @@ fn named_let(key: &String, bindings: &Args, body: &Args, env: &mut Env) -> TcoRe
 }
 
 pub fn evalfn(args: &Args, env: &mut Env) -> FuncResult {
-    if args.has_next() {
-        return Err(Error::WrongArgNum);
-    }
-    let sexpr = head_or_err(args)?;
-    eval(&eval(sexpr, env)?, env)
+    eval_one_arg(args, env).and_then(|ref sexpr| eval(sexpr, env))
 }
 
 pub fn load(args: &Args, env: &mut Env) -> FuncResult {

@@ -25,7 +25,8 @@ shorter way of writing `(define name (lambda (arg1 arg2 ...) expr1 expr2 ...))` 
 condition always evaluating to `#t`, e.g. `(cond (else 'yay))`.
 - `(begin expr1 expr2 ...)` evaluates *expr1*, *expr2*, ..., returns the result of evaluating the last *exprN* expression.
 - `(quote expr)` or `'expr` returns *expr* without evaluating it. While `quote` is commonly used for constructing lists,
-  [it is not the same] as `list`. 
+  [it is not the same] as `list`. `(quasiquote expr)` or `` `expr`` works like `quote`, but parts of the expression can
+  be evaluated using `(unquote expr)` or `,expr`, for example `` `(2 + 2 = ,(+ 2 2))`` will evaluate to `(2 + 2 = 4)`.
 - `(eval expr)` does the opposite to `quote` by evaluating *expr*, e.g. `(eval '(+ 2 2))` returns `4` rather than the
 `(+ 2 2)` list.
 - `(eq? obj1 obj2)` compares if two objects are equal, `equal?` is just an alias for it.

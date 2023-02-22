@@ -45,13 +45,18 @@ pub fn eval_iter<'a>(
     args.iter().map(|elem| eval(elem, env))
 }
 
-/// Evaluate first argument, raise error if more arguments were passed
 #[inline]
-pub fn eval_one_arg(args: &Args, env: &mut Env) -> FuncResult {
+pub fn one_arg_or_err(args: &Args) -> Result<&Sexpr, Error<Sexpr>> {
     if args.has_next() {
         return Err(Error::WrongArgNum);
     }
-    head_or_err(args).and_then(|sexpr| eval(sexpr, env))
+    head_or_err(args)
+}
+
+/// Evaluate first argument, raise error if more arguments were passed
+#[inline]
+pub fn eval_one_arg(args: &Args, env: &mut Env) -> FuncResult {
+    one_arg_or_err(args).and_then(|sexpr| eval(sexpr, env))
 }
 
 /// Fold the list

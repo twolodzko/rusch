@@ -26,10 +26,73 @@ macro_rules! assert_eval_eq {
 
 #[test]
 fn quote() {
+    assert_eval_eq!("'foo", Ok(Sexpr::symbol("foo")));
     assert_eval_eq!("(quote foo)", Ok(Sexpr::symbol("foo")));
+    assert_eval_eq!("'()", Ok(Sexpr::null()));
 
     assert_eval_eq!("(quote)", Err(Error::WrongArgNum));
     assert_eval_eq!("(quote foo bar)", Err(Error::WrongArgNum));
+}
+
+#[test]
+fn unquote() {
+    assert_eval_eq!("(unquote (+ 2 2))", Ok(Sexpr::Integer(4)));
+    assert_eval_eq!(",(+ 2 2)", Ok(Sexpr::Integer(4)));
+
+    assert_eval_eq!("(quote)", Err(Error::WrongArgNum));
+    assert_eval_eq!("(quote foo bar)", Err(Error::WrongArgNum));
+}
+
+#[test]
+fn quasiquote() {
+    assert_eval_eq!("`foo", Ok(Sexpr::symbol("foo")));
+    assert_eval_eq!("(quasiquote foo)", Ok(Sexpr::symbol("foo")));
+    assert_eval_eq!("(quasiquote ())", Ok(Sexpr::null()));
+    assert_eval_eq!("(quasiquote (unquote (+ 2 2)))", Ok(Sexpr::Integer(4)));
+    assert_eval_eq!(
+        "(quasiquote (quasiquote (unquote (+ 2 2))))",
+        Ok(Sexpr::from(vec![
+            Sexpr::symbol("quasiquote"),
+            Sexpr::from(vec![
+                Sexpr::symbol("unquote"),
+                Sexpr::from(vec![
+                    Sexpr::symbol("+"),
+                    Sexpr::Integer(2),
+                    Sexpr::Integer(2)
+                ])
+            ])
+        ]))
+    );
+    assert_eval_eq!(
+        "`(2 + 2 = ,(+ 2 2))",
+        Ok(Sexpr::from(vec![
+            Sexpr::Integer(2),
+            Sexpr::symbol("+"),
+            Sexpr::Integer(2),
+            Sexpr::symbol("="),
+            Sexpr::Integer(4),
+        ]))
+    );
+    // check if unquote's don't stick
+    assert_eval_eq!(
+        "`((+ 2 2) ,(+ 2 2) (+ 2 2))",
+        Ok(Sexpr::from(vec![
+            Sexpr::from(vec![
+                Sexpr::symbol("+"),
+                Sexpr::Integer(2),
+                Sexpr::Integer(2),
+            ]),
+            Sexpr::Integer(4),
+            Sexpr::from(vec![
+                Sexpr::symbol("+"),
+                Sexpr::Integer(2),
+                Sexpr::Integer(2),
+            ]),
+        ]))
+    );
+
+    assert_eval_eq!("(quasiquote)", Err(Error::WrongArgNum));
+    assert_eval_eq!("(quasiquote foo bar)", Err(Error::WrongArgNum));
 }
 
 #[test]

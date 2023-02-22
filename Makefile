@@ -34,3 +34,9 @@ benchmark: rusch
 .PHONY: lines
 lines:
 	@ find . -type f -name "*.rs" -exec awk '1;/#[cfg\(test\)]/{exit}' {} \; | grep . | wc -l
+
+.PHONY: clean
+clean:
+	rm -rf rusch
+	rm -rf target
+	rm -rf Cargo.lock

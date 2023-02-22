@@ -322,6 +322,11 @@ mod tests {
             Err(Error::NotANumber(Sexpr::True))
         );
 
+        assert_eq!(Integer(5) / Integer(0), Err(Error::Undefined));
+        assert_eq!(Integer(5) / Float(0.0), Err(Error::Undefined));
+        assert_eq!(Float(5.0) / Integer(0), Err(Error::Undefined));
+        assert_eq!(Float(5.0) / Float(0.0), Err(Error::Undefined));
+
         assert_eq!(Integer(5) % Integer(2), Ok(Integer(1)));
         assert_eq!(Integer(5) % Float(2.0), Ok(Float(1.0)));
         assert_eq!(Float(5.0) % Integer(2), Ok(Float(1.0)));

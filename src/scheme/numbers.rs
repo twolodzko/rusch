@@ -153,7 +153,7 @@ fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
     Ok(Sexpr::True)
 }
 
-macro_rules! math_op {
+macro_rules! op {
     ( $op:tt, $lhs:expr, $rhs:expr ) => {
         {
             use Sexpr::{Float, Integer};
@@ -173,7 +173,7 @@ impl ops::Add<Sexpr> for Sexpr {
     type Output = FuncResult;
 
     fn add(self, rhs: Sexpr) -> Self::Output {
-        math_op!(+, self, rhs)
+        op!(+, self, rhs)
     }
 }
 
@@ -181,7 +181,7 @@ impl ops::Sub<Sexpr> for Sexpr {
     type Output = FuncResult;
 
     fn sub(self, rhs: Sexpr) -> Self::Output {
-        math_op!(-, self, rhs)
+        op!(-, self, rhs)
     }
 }
 
@@ -189,7 +189,7 @@ impl ops::Mul<Sexpr> for Sexpr {
     type Output = FuncResult;
 
     fn mul(self, rhs: Sexpr) -> Self::Output {
-        math_op!(*, self, rhs)
+        op!(*, self, rhs)
     }
 }
 

@@ -36,15 +36,6 @@ pub fn head_or_err(args: &Args) -> Result<&Sexpr, Error<Sexpr>> {
     args.head().ok_or(Error::WrongArgNum)
 }
 
-/// Initialize iterator that evaluates and returns each element of the list
-#[inline]
-pub fn eval_iter<'a>(
-    args: &'a List<Sexpr>,
-    env: &'a mut Env,
-) -> impl Iterator<Item = FuncResult> + 'a {
-    args.iter().map(|elem| eval(elem, env))
-}
-
 #[inline]
 pub fn one_arg_or_err(args: &Args) -> Result<&Sexpr, Error<Sexpr>> {
     if args.has_next() {
@@ -57,4 +48,13 @@ pub fn one_arg_or_err(args: &Args) -> Result<&Sexpr, Error<Sexpr>> {
 #[inline]
 pub fn eval_one_arg(args: &Args, env: &mut Env) -> FuncResult {
     one_arg_or_err(args).and_then(|sexpr| eval(sexpr, env))
+}
+
+/// Initialize iterator that evaluates and returns each element of the list
+#[inline]
+pub fn eval_iter<'a>(
+    args: &'a List<Sexpr>,
+    env: &'a mut Env,
+) -> impl Iterator<Item = FuncResult> + 'a {
+    args.iter().map(|elem| eval(elem, env))
 }

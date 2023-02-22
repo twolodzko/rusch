@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::{fmt, ops};
+use std::fmt;
 
 use crate::envir;
 use crate::errors::Error;
@@ -165,102 +165,6 @@ impl From<Vec<Sexpr>> for Sexpr {
 impl FromIterator<Sexpr> for Sexpr {
     fn from_iter<I: IntoIterator<Item = Sexpr>>(iter: I) -> Self {
         Sexpr::List(List::<Sexpr>::from_iter(iter))
-    }
-}
-
-macro_rules! math_op {
-    ( $op:tt, $lhs:expr, $rhs:expr ) => {
-        {
-            use Sexpr::{Float, Integer};
-            match ($lhs, $rhs) {
-                (Integer(x), Integer(y)) => Ok(Integer(x $op y)),
-                (Integer(x), Float(y)) => Ok(Float(x as f64 $op y)),
-                (Float(x), Integer(y)) => Ok(Float(x $op y as f64)),
-                (Float(x), Float(y)) => Ok(Float(x $op y)),
-                (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
-                (x, _) => Err(Error::NotANumber(x)),
-            }
-        }
-    };
-}
-
-impl ops::Add<Sexpr> for Sexpr {
-    type Output = FuncResult;
-
-    fn add(self, rhs: Sexpr) -> Self::Output {
-        math_op!(+, self, rhs)
-    }
-}
-
-impl ops::Sub<Sexpr> for Sexpr {
-    type Output = FuncResult;
-
-    fn sub(self, rhs: Sexpr) -> Self::Output {
-        math_op!(-, self, rhs)
-    }
-}
-
-impl ops::Mul<Sexpr> for Sexpr {
-    type Output = FuncResult;
-
-    fn mul(self, rhs: Sexpr) -> Self::Output {
-        math_op!(*, self, rhs)
-    }
-}
-
-impl ops::Div<Sexpr> for Sexpr {
-    type Output = FuncResult;
-
-    fn div(self, rhs: Sexpr) -> Self::Output {
-        use Sexpr::{Float, Integer};
-        match (self, rhs) {
-            (Integer(x), Integer(y)) => Ok(Float(x as f64 / y as f64)),
-            (Integer(x), Float(y)) => Ok(Float(x as f64 / y)),
-            (Float(x), Integer(y)) => Ok(Float(x / y as f64)),
-            (Float(x), Float(y)) => Ok(Float(x / y)),
-            (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
-            (x, _) => Err(Error::NotANumber(x)),
-        }
-    }
-}
-
-pub trait NonZero<T> {
-    fn non_zero(self) -> Result<T, Error<Sexpr>>;
-}
-
-impl NonZero<i64> for i64 {
-    #[inline]
-    fn non_zero(self) -> Result<i64, Error<Sexpr>> {
-        if self == 0 {
-            return Err(Error::Undefined);
-        }
-        Ok(self)
-    }
-}
-
-impl NonZero<f64> for f64 {
-    #[inline]
-    fn non_zero(self) -> Result<f64, Error<Sexpr>> {
-        if self == 0.0 {
-            return Err(Error::Undefined);
-        }
-        Ok(self)
-    }
-}
-
-impl ops::Rem<Sexpr> for Sexpr {
-    type Output = FuncResult;
-
-    fn rem(self, rhs: Sexpr) -> Self::Output {
-        use Sexpr::{Float, Integer};
-        match (self, rhs) {
-            (Integer(x), Integer(y)) => y.non_zero().map(|y| Integer(x % y)),
-            (Integer(x), Float(y)) => y.non_zero().map(|y| Float(x as f64 % y)),
-            (Float(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x % y)),
-            (Float(x), Float(y)) => y.non_zero().map(|y| Float(x % y)),
-            (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
-            (x, _) => Err(Error::NotANumber(x)),
-        }
     }
 }
 
@@ -522,81 +426,6 @@ mod tests {
                 .cloned()
                 .collect::<Result<Sexpr, Error<Sexpr>>>(),
             Err(Error::from("ok"))
-        );
-    }
-
-    #[test]
-    fn math_operations() {
-        use crate::errors::Error;
-        use Sexpr::{Float, Integer};
-
-        assert_eq!(Integer(2) + Integer(2), Ok(Integer(4)));
-        assert_eq!(Integer(2) + Float(2.0), Ok(Float(4.0)));
-        assert_eq!(Float(2.0) + Integer(2), Ok(Float(4.0)));
-        assert_eq!(Float(2.0) + Float(2.0), Ok(Float(4.0)));
-        assert_eq!(
-            Float(2.0) + Sexpr::True,
-            Err(Error::NotANumber(Sexpr::True))
-        );
-        assert_eq!(
-            Sexpr::True + Float(2.0),
-            Err(Error::NotANumber(Sexpr::True))
-        );
-
-        assert_eq!(Integer(2) - Integer(1), Ok(Integer(1)));
-        assert_eq!(Integer(2) - Float(1.0), Ok(Float(1.0)));
-        assert_eq!(Float(2.0) - Integer(1), Ok(Float(1.0)));
-        assert_eq!(Float(2.0) - Float(1.0), Ok(Float(1.0)));
-        assert_eq!(
-            Float(2.0) - Sexpr::True,
-            Err(Error::NotANumber(Sexpr::True))
-        );
-        assert_eq!(
-            Sexpr::True - Float(2.0),
-            Err(Error::NotANumber(Sexpr::True))
-        );
-
-        assert_eq!(Integer(2) * Integer(2), Ok(Integer(4)));
-        assert_eq!(Integer(2) * Float(2.0), Ok(Float(4.0)));
-        assert_eq!(Float(2.0) * Integer(2), Ok(Float(4.0)));
-        assert_eq!(Float(2.0) * Float(2.0), Ok(Float(4.0)));
-        assert_eq!(
-            Float(2.0) * Sexpr::True,
-            Err(Error::NotANumber(Sexpr::True))
-        );
-        assert_eq!(
-            Sexpr::True * Float(2.0),
-            Err(Error::NotANumber(Sexpr::True))
-        );
-
-        assert_eq!(Integer(4) / Integer(2), Ok(Float(2.0)));
-        assert_eq!(Integer(4) / Float(2.0), Ok(Float(2.0)));
-        assert_eq!(Float(4.0) / Integer(2), Ok(Float(2.0)));
-        assert_eq!(Float(4.0) / Float(2.0), Ok(Float(2.0)));
-        assert_eq!(
-            Float(4.0) / Sexpr::True,
-            Err(Error::NotANumber(Sexpr::True))
-        );
-        assert_eq!(
-            Sexpr::True / Float(4.0),
-            Err(Error::NotANumber(Sexpr::True))
-        );
-
-        assert_eq!(Integer(5) % Integer(2), Ok(Integer(1)));
-        assert_eq!(Integer(5) % Float(2.0), Ok(Float(1.0)));
-        assert_eq!(Float(5.0) % Integer(2), Ok(Float(1.0)));
-        assert_eq!(Float(5.0) % Float(2.0), Ok(Float(1.0)));
-        assert_eq!(Integer(5) % Integer(0), Err(Error::Undefined));
-        assert_eq!(Integer(5) % Float(0.0), Err(Error::Undefined));
-        assert_eq!(Float(5.0) % Integer(0), Err(Error::Undefined));
-        assert_eq!(Float(5.0) % Float(0.0), Err(Error::Undefined));
-        assert_eq!(
-            Float(5.0) % Sexpr::True,
-            Err(Error::NotANumber(Sexpr::True))
-        );
-        assert_eq!(
-            Sexpr::True % Float(5.0),
-            Err(Error::NotANumber(Sexpr::True))
         );
     }
 }

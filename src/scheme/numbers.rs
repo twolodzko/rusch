@@ -199,10 +199,10 @@ impl ops::Div<Sexpr> for Sexpr {
     fn div(self, rhs: Sexpr) -> Self::Output {
         use Sexpr::{Float, Integer};
         match (self, rhs) {
-            (Integer(x), Integer(y)) => Ok(Float(x as f64 / y as f64)),
-            (Integer(x), Float(y)) => Ok(Float(x as f64 / y)),
-            (Float(x), Integer(y)) => Ok(Float(x / y as f64)),
-            (Float(x), Float(y)) => Ok(Float(x / y)),
+            (Integer(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x as f64 / y)),
+            (Integer(x), Float(y)) => y.non_zero().map(|y| Float(x as f64 / y)),
+            (Float(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x / y)),
+            (Float(x), Float(y)) => y.non_zero().map(|y| Float(x / y)),
             (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
             (x, _) => Err(Error::NotANumber(x)),
         }

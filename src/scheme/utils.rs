@@ -103,27 +103,3 @@ pub fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult 
     }
     Ok(Sexpr::True)
 }
-
-pub trait NonZero<T> {
-    fn non_zero(self) -> Result<T, Error<Sexpr>>;
-}
-
-impl NonZero<i64> for i64 {
-    #[inline]
-    fn non_zero(self) -> Result<i64, Error<Sexpr>> {
-        if self == 0 {
-            return Err(Error::Undefined);
-        }
-        Ok(self)
-    }
-}
-
-impl NonZero<f64> for f64 {
-    #[inline]
-    fn non_zero(self) -> Result<f64, Error<Sexpr>> {
-        if self == 0.0 {
-            return Err(Error::Undefined);
-        }
-        Ok(self)
-    }
-}

@@ -1,9 +1,11 @@
 use crate::eval::eval_but_last;
+use crate::scheme::numbers::*;
 use crate::scheme::procedures::*;
 use crate::scheme::special_forms::*;
 use crate::scheme::utils::eval_one_arg;
 use crate::types::{Env, Sexpr};
 
+mod numbers;
 mod procedures;
 mod special_forms;
 mod utils;

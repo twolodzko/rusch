@@ -1,9 +1,8 @@
-use std::cmp::Ordering;
-use std::ops;
-
 use super::utils::*;
 use crate::errors::Error;
 use crate::types::{Args, Env, Flt, FuncResult, Int, Sexpr};
+use std::cmp::Ordering;
+use std::ops;
 
 pub fn add(args: &Args, env: &mut Env) -> FuncResult {
     list_reduce(args, env, Sexpr::Integer(0), |x, y| x + y)
@@ -258,9 +257,7 @@ impl std::cmp::PartialOrd for Sexpr {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::Flt;
-
-    use super::Sexpr;
+    use crate::types::{Flt, Sexpr};
 
     #[test]
     fn math() {

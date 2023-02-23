@@ -17,10 +17,11 @@
   current environment.
 - `(lambda (arg1 arg2 ...) expr1 expr2 ...)` defines a [lambda expression] (*aka* function). There is also an equivalent,
 shorter way of writing `(define name (lambda (arg1 arg2 ...) expr1 expr2 ...))` as `(define (name arg1 arg2 ...) expr1 expr2 ...)`.
-- `(let ((name1 value1) (name2 value2) ...) expr1 expr2 ...)` evaluates *expr1*, *expr2*, ... in the local environment,
-  with *name1*, *name2*, ... variables present; returns the result of evaluating the last *exprN* expression.
-  `let*` is like `let`, but the *arg1*, *arg2*, ... arguments are evaluated sequentially, from left to right,
-  and the following arguments can depend on the preceding.
+- `(let ((var1 expr1) (var2 expr2) ...) body1 body2 ...)` evaluates *body1*, *body2*, ... in the local environment,
+  with *var1*, *var2*, ... variables present; returns the result of evaluating the last *bodyN* expression.
+  `let*` is like `let`, but the arguments are evaluated sequentially, from left to right, and the following arguments
+  can depend on the preceding. The syntax `(let name ((var1 expr1) (var2 expr2) ...) body1 doby2 ...)` can be used for
+  defining [named let].
 - `(if condition if-true if-false)` and `(cond (test1 expr1) (test2 expr2) ...)` conditionals with special `else`
 condition always evaluating to `#t`, e.g. `(cond (else 'yay))`.
 - `(begin expr1 expr2 ...)` evaluates *expr1*, *expr2*, ..., returns the result of evaluating the last *exprN* expression.
@@ -33,7 +34,7 @@ condition always evaluating to `#t`, e.g. `(cond (else 'yay))`.
 - Logical `(not obj)`, `and`, and `or`, e.g. `(and obj1 obj2 ...)`.
 - Arithmetic operators `+`, `-`, `*`, `/`, e.g. `(+ x1 x2 ...)`, and `%` for remainder [as defined in Rust].
   Those procedures promote integers to floats if any of the arguments is a float. Division `/` always promotes arguments
-  to floats, for integer division use `//`.
+  to floats, for Euclidean division use `//`.
 - Numerical comparison operators `<`, `=`, `>`, e.g. `(< x1 x2 ...)`.
 - Checkers for the [disjoint types]: `pair?`, `number?`, `boolean?`, `string?`, `symbol?`, `procedure?`, and
   other checkers: `integer?`, `float?`, `null?` (empty list) and `nil?` (null value).
@@ -52,3 +53,4 @@ The design of this implementation is similar to [the one in Go] and it was descr
  [it is not the same]: https://stackoverflow.com/questions/34984552/what-is-the-difference-between-quote-and-list
  [disjoint types]: https://www.cs.cmu.edu/Groups/AI/html/r4rs/r4rs_5.html#SEC23
  [as defined in Rust]: https://stackoverflow.com/questions/31210357/is-there-a-modulus-not-remainder-function-operation
+ [named let]: https://www.scheme.com/tspl4/control.html#./control:s20

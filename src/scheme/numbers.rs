@@ -33,24 +33,11 @@ pub fn rem(args: &Args, env: &mut Env) -> FuncResult {
         .unwrap_or(Err(Error::WrongArgNum))
 }
 
-pub fn int_div(args: &Args, env: &mut Env) -> FuncResult {
-    #[inline]
-    fn divide(x: Sexpr, y: Sexpr) -> FuncResult {
-        use Sexpr::{Float, Integer};
-        match (x, y) {
-            (Integer(x), Integer(y)) => y.non_zero().map(|y| Integer(x / y)),
-            (Integer(x), Float(y)) => (y as i64).non_zero().map(|y| Integer(x / y)),
-            (Float(x), Integer(y)) => y.non_zero().map(|y| Integer(x as i64 / y)),
-            (Float(x), Float(y)) => (y as i64).non_zero().map(|y| Integer(x as i64 / y)),
-            (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
-            (x, _) => Err(Error::NotANumber(x)),
-        }
-    }
-
+pub fn div_euclid(args: &Args, env: &mut Env) -> FuncResult {
     if args.is_empty() {
         return Err(Error::WrongArgNum);
     }
-    list_reduce(args, env, Sexpr::Integer(1), divide)
+    list_reduce(args, env, Sexpr::Integer(1), |x, y| x.div_euclid(y))
 }
 
 pub fn gt(args: &Args, env: &mut Env) -> FuncResult {
@@ -59,6 +46,10 @@ pub fn gt(args: &Args, env: &mut Env) -> FuncResult {
 
 pub fn lt(args: &Args, env: &mut Env) -> FuncResult {
     cmp(args, env, std::cmp::Ordering::Less)
+}
+
+pub fn eq(args: &Args, env: &mut Env) -> FuncResult {
+    cmp(args, env, std::cmp::Ordering::Equal)
 }
 
 pub fn to_integer(args: &Args, env: &mut Env) -> FuncResult {
@@ -142,9 +133,12 @@ fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
 
     for elem in &mut *iter {
         let elem = elem?;
-        let cmp = prev
-            .partial_cmp(&elem)
-            .ok_or_else(|| Error::NotANumber(elem.clone()))?;
+        let cmp =
+            prev.partial_cmp(&elem.clone())
+                .ok_or_else(|| match (prev.clone(), elem.clone()) {
+                    (prev, Sexpr::Float(_) | Sexpr::Integer(_)) => Error::NotANumber(prev),
+                    (_, elem) => Error::NotANumber(elem),
+                })?;
         if cmp != order {
             return Ok(Sexpr::False);
         }
@@ -172,7 +166,7 @@ macro_rules! op {
 impl ops::Add<Sexpr> for Sexpr {
     type Output = FuncResult;
 
-    fn add(self, rhs: Sexpr) -> Self::Output {
+    fn add(self, rhs: Self) -> Self::Output {
         op!(self + rhs)
     }
 }
@@ -180,7 +174,7 @@ impl ops::Add<Sexpr> for Sexpr {
 impl ops::Sub<Sexpr> for Sexpr {
     type Output = FuncResult;
 
-    fn sub(self, rhs: Sexpr) -> Self::Output {
+    fn sub(self, rhs: Self) -> Self::Output {
         op!(self - rhs)
     }
 }
@@ -188,7 +182,7 @@ impl ops::Sub<Sexpr> for Sexpr {
 impl ops::Mul<Sexpr> for Sexpr {
     type Output = FuncResult;
 
-    fn mul(self, rhs: Sexpr) -> Self::Output {
+    fn mul(self, rhs: Self) -> Self::Output {
         op!(self * rhs)
     }
 }
@@ -196,7 +190,7 @@ impl ops::Mul<Sexpr> for Sexpr {
 impl ops::Div<Sexpr> for Sexpr {
     type Output = FuncResult;
 
-    fn div(self, rhs: Sexpr) -> Self::Output {
+    fn div(self, rhs: Self) -> Self::Output {
         use Sexpr::{Float, Integer};
         match (self, rhs) {
             (Integer(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x as f64 / y)),
@@ -209,24 +203,37 @@ impl ops::Div<Sexpr> for Sexpr {
     }
 }
 
-impl ops::Rem<Sexpr> for Sexpr {
-    type Output = FuncResult;
-
-    fn rem(self, rhs: Sexpr) -> Self::Output {
+macro_rules! non_zero_op {
+    ( $func:tt $lhs:tt $rhs:tt ) => {{
         use Sexpr::{Float, Integer};
-        match (self, rhs) {
-            (Integer(x), Integer(y)) => y.non_zero().map(|y| Integer(x % y)),
-            (Integer(x), Float(y)) => y.non_zero().map(|y| Float(x as f64 % y)),
-            (Float(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x % y)),
-            (Float(x), Float(y)) => y.non_zero().map(|y| Float(x % y)),
+        match ($lhs, $rhs) {
+            (Integer(x), Integer(y)) => y.non_zero().map(|y| Integer(x.$func(y))),
+            (Integer(x), Float(y)) => y.non_zero().map(|y| Float((x as f64).$func(y))),
+            (Float(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x.$func(y))),
+            (Float(x), Float(y)) => y.non_zero().map(|y| Float(x.$func(y))),
             (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
             (x, _) => Err(Error::NotANumber(x)),
         }
+    }};
+}
+
+impl Sexpr {
+    #[inline]
+    fn div_euclid(self, rhs: Self) -> FuncResult {
+        non_zero_op!(div_euclid self rhs)
+    }
+}
+
+impl ops::Rem<Sexpr> for Sexpr {
+    type Output = FuncResult;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        non_zero_op!(rem self rhs)
     }
 }
 
 impl std::cmp::PartialOrd for Sexpr {
-    fn partial_cmp(&self, other: &Sexpr) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
             (Sexpr::Integer(x), Sexpr::Integer(y)) => x.partial_cmp(y),
             (Sexpr::Integer(x), Sexpr::Float(y)) => (*x as f64).partial_cmp(y),

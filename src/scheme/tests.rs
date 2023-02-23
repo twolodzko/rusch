@@ -24,6 +24,20 @@ macro_rules! assert_eval_eq {
     };
 }
 
+/// Assert if expression is equal to the string representation
+#[macro_export]
+macro_rules! assert_eval_num_eq {
+    ( $lhs:expr, $rhs:expr ) => {
+        let env = &mut root_env();
+        let result = parse_eval!($lhs, env).unwrap();
+        match (result, $rhs) {
+            (Sexpr::Float(x), Sexpr::Float(y)) => assert_eq!(x, y),
+            (Sexpr::Integer(x), Sexpr::Integer(y)) => assert_eq!(x, y),
+            _ => panic!("types don't match"),
+        }
+    };
+}
+
 #[test]
 fn quote() {
     assert_eval_eq!("'foo", Ok(Sexpr::symbol("foo")));
@@ -182,16 +196,16 @@ fn add() {
     use Sexpr::{Float, Integer};
 
     // basics
-    assert_eval_eq!("(+)", Ok(Integer(0)));
-    assert_eval_eq!("(+ 2 2)", Ok(Integer(4)));
-    assert_eval_eq!("(+ '2 2)", Ok(Integer(4)));
-    assert_eval_eq!("(+ 1 2 3)", Ok(Integer(6)));
-    assert_eval_eq!("(+ 1 (+ 1 1) (+ 1 1 1))", Ok(Integer(6)));
+    assert_eval_num_eq!("(+)", Integer(0));
+    assert_eval_num_eq!("(+ 2 2)", Integer(4));
+    assert_eval_num_eq!("(+ '2 2)", Integer(4));
+    assert_eval_num_eq!("(+ 1 2 3)", Integer(6));
+    assert_eval_num_eq!("(+ 1 (+ 1 1) (+ 1 1 1))", Integer(6));
 
     // floats & casts
-    assert_eval_eq!("(+ 2.0  2.0 )", Ok(Float(4.0)));
-    assert_eval_eq!("(+  2   2.0 )", Ok(Float(4.0)));
-    assert_eval_eq!("(+ 2.0   2  )", Ok(Float(4.0)));
+    assert_eval_num_eq!("(+ 2.0  2.0 )", Float(4.0));
+    assert_eval_num_eq!("(+  2   2.0 )", Float(4.0));
+    assert_eval_num_eq!("(+ 2.0   2  )", Float(4.0));
 
     // errors
     assert_eval_eq!("(+ x)", Err(Error::NotFound(String::from("x"))));
@@ -205,17 +219,17 @@ fn sub() {
     use Sexpr::{Float, Integer};
 
     // basics
-    assert_eval_eq!("(-)", Ok(Integer(0)));
-    assert_eval_eq!("(- 1)", Ok(Integer(-1)));
-    assert_eval_eq!("(- 3 2)", Ok(Integer(1)));
-    assert_eval_eq!("(- '3 2)", Ok(Integer(1)));
-    assert_eval_eq!("(- 10 5 2)", Ok(Integer(3)));
-    assert_eval_eq!("(- 6 (- 2 1) (- 6 3 1))", Ok(Integer(3)));
+    assert_eval_num_eq!("(-)", Integer(0));
+    assert_eval_num_eq!("(- 1)", Integer(-1));
+    assert_eval_num_eq!("(- 3 2)", Integer(1));
+    assert_eval_num_eq!("(- '3 2)", Integer(1));
+    assert_eval_num_eq!("(- 10 5 2)", Integer(3));
+    assert_eval_num_eq!("(- 6 (- 2 1) (- 6 3 1))", Integer(3));
 
     // floats & casts
-    assert_eval_eq!("(- 2.0  1.0 )", Ok(Float(1.0)));
-    assert_eval_eq!("(-  2   1.0 )", Ok(Float(1.0)));
-    assert_eval_eq!("(- 2.0   1  )", Ok(Float(1.0)));
+    assert_eval_num_eq!("(- 2.0  1.0 )", Float(1.0));
+    assert_eval_num_eq!("(-  2   1.0 )", Float(1.0));
+    assert_eval_num_eq!("(- 2.0   1  )", Float(1.0));
 
     // errors
     assert_eval_eq!("(- 1 'foo)", Err(Error::NotANumber(Sexpr::symbol("foo"))));
@@ -227,16 +241,16 @@ fn mul() {
     use Sexpr::{Float, Integer};
 
     // basics
-    assert_eval_eq!("(*)", Ok(Integer(1)));
-    assert_eval_eq!("(* 2 3)", Ok(Integer(6)));
-    assert_eval_eq!("(* '2 3)", Ok(Integer(6)));
-    assert_eval_eq!("(* 1 2 3)", Ok(Integer(6)));
-    assert_eval_eq!("(* 1 (* 1 2) (* 1 2 3))", Ok(Integer(12)));
+    assert_eval_num_eq!("(*)", Integer(1));
+    assert_eval_num_eq!("(* 2 3)", Integer(6));
+    assert_eval_num_eq!("(* '2 3)", Integer(6));
+    assert_eval_num_eq!("(* 1 2 3)", Integer(6));
+    assert_eval_num_eq!("(* 1 (* 1 2) (* 1 2 3))", Integer(12));
 
     // floats & casts
-    assert_eval_eq!("(* 2.0  3.0 )", Ok(Float(6.0)));
-    assert_eval_eq!("(*  2   3.0 )", Ok(Float(6.0)));
-    assert_eval_eq!("(* 2.0   3  )", Ok(Float(6.0)));
+    assert_eval_num_eq!("(* 2.0  3.0 )", Float(6.0));
+    assert_eval_num_eq!("(*  2   3.0 )", Float(6.0));
+    assert_eval_num_eq!("(* 2.0   3  )", Float(6.0));
 
     // errors
     assert_eval_eq!("(* 1 'foo)", Err(Error::NotANumber(Sexpr::symbol("foo"))));
@@ -248,15 +262,15 @@ fn div() {
     use Sexpr::Float;
 
     // basics
-    assert_eval_eq!("(/ 2)", Ok(Float(0.5)));
-    assert_eval_eq!("(/ '9 3)", Ok(Float(3.0)));
-    assert_eval_eq!("(/ 30 10 3)", Ok(Float(1.0)));
-    assert_eval_eq!("(/ 300 (/ 12 4) (/ 500 5 10))", Ok(Float(10.0)));
+    assert_eval_num_eq!("(/ 2)", Float(0.5));
+    assert_eval_num_eq!("(/ '9 3)", Float(3.0));
+    assert_eval_num_eq!("(/ 30 10 3)", Float(1.0));
+    assert_eval_num_eq!("(/ 300 (/ 12 4) (/ 500 5 10))", Float(10.0));
 
-    // // floats & casts
-    assert_eval_eq!("(/ 6.0  3.0 )", Ok(Float(2.0)));
-    assert_eval_eq!("(/  6   3.0 )", Ok(Float(2.0)));
-    assert_eval_eq!("(/ 6.0   3  )", Ok(Float(2.0)));
+    // floats & casts
+    assert_eval_num_eq!("(/ 6.0  3.0 )", Float(2.0));
+    assert_eval_num_eq!("(/  6   3.0 )", Float(2.0));
+    assert_eval_num_eq!("(/ 6.0   3  )", Float(2.0));
 
     // errors
     assert_eval_eq!("(/)", Err(Error::WrongArgNum));
@@ -269,14 +283,14 @@ fn rem() {
     use Sexpr::{Float, Integer};
 
     // basics
-    assert_eval_eq!("(% 4 2)", Ok(Integer(0)));
-    assert_eval_eq!("(% '7 3)", Ok(Integer(1)));
-    assert_eval_eq!("(% 104 5 3)", Ok(Integer(1)));
+    assert_eval_num_eq!("(% 4 2)", Integer(0));
+    assert_eval_num_eq!("(% '7 3)", Integer(1));
+    assert_eval_num_eq!("(% 104 5 3)", Integer(1));
 
     // floats & casts
-    assert_eval_eq!("(% 5.0  2.0 )", Ok(Float(1.0)));
-    assert_eval_eq!("(%  5   2.0 )", Ok(Float(1.0)));
-    assert_eval_eq!("(% 5.0   2  )", Ok(Float(1.0)));
+    assert_eval_num_eq!("(% 5.0  2.0 )", Float(1.0));
+    assert_eval_num_eq!("(%  5   2.0 )", Float(1.0));
+    assert_eval_num_eq!("(% 5.0   2  )", Float(1.0));
 
     // errors
     assert_eval_eq!("(%)", Err(Error::WrongArgNum));
@@ -289,20 +303,21 @@ fn rem() {
 }
 
 #[test]
-fn int_div() {
-    use Sexpr::Integer;
+fn div_euclid() {
+    use Sexpr::{Float, Integer};
 
     // basics
-    assert_eval_eq!("(// 2)", Ok(Integer(0)));
-    assert_eval_eq!("(// '9 3)", Ok(Integer(3)));
-    assert_eval_eq!("(// (+ 5 5) 3)", Ok(Integer(3)));
-    assert_eval_eq!("(// 30 10 3)", Ok(Integer(1)));
-    assert_eval_eq!("(// 300 (// 12 4) (// 500 5 10))", Ok(Integer(10)));
+    assert_eval_num_eq!("(// 2)", Integer(0));
+    assert_eval_num_eq!("(// '9 3)", Integer(3));
+    assert_eval_num_eq!("(// (+ 5 5) 3)", Integer(3));
+    assert_eval_num_eq!("(// 30 10 3)", Integer(1));
+    assert_eval_num_eq!("(// 300 (// 12 4) (// 500 5 10))", Integer(10));
 
-    // // floats & casts
-    assert_eval_eq!("(// 6.0  3.0 )", Ok(Integer(2)));
-    assert_eval_eq!("(//  6   3.0 )", Ok(Integer(2)));
-    assert_eval_eq!("(// 6.0   3  )", Ok(Integer(2)));
+    // floats & casts
+    assert_eval_num_eq!("(//  6    4  )", Integer(1));
+    assert_eval_num_eq!("(// 6.0  4.0 )", Float(1.0));
+    assert_eval_num_eq!("(//  6   4.0 )", Float(1.0));
+    assert_eval_num_eq!("(// 6.0   4  )", Float(1.0));
 
     // errors
     assert_eval_eq!("(//)", Err(Error::WrongArgNum));
@@ -349,10 +364,41 @@ fn cmp() {
     assert_eval_eq!("(> 1)", Ok(True));
     assert_eval_eq!("(> 3 2 1)", Ok(True));
 
+    assert_eval_eq!("(=)", Ok(True));
+    assert_eval_eq!("(= 1)", Ok(True));
+    assert_eval_eq!("(= 1 1 1)", Ok(True));
+
     // negative
     assert_eval_eq!("(< 1 3 2)", Ok(False));
     assert_eval_eq!("(> 3 1 2)", Ok(False));
     assert_eval_eq!("(< 1 2 3 2 5)", Ok(False));
+    assert_eval_eq!("(= 1 1 2)", Ok(False));
+
+    // different types
+    assert_eval_eq!("(< 1 2)", Ok(True));
+    assert_eval_eq!("(< 1.0 2)", Ok(True));
+    assert_eval_eq!("(< 1 2.0)", Ok(True));
+    assert_eval_eq!("(< 1.0 2.0)", Ok(True));
+
+    assert_eval_eq!("(> 3 2)", Ok(True));
+    assert_eval_eq!("(> 3.0 2)", Ok(True));
+    assert_eval_eq!("(> 3 2.0)", Ok(True));
+    assert_eval_eq!("(> 3.0 2.0)", Ok(True));
+
+    assert_eval_eq!("(= 1 1)", Ok(True));
+    assert_eval_eq!("(= 1.0 1)", Ok(True));
+    assert_eval_eq!("(= 1 1.0)", Ok(True));
+    assert_eval_eq!("(= 1.0 1.0)", Ok(True));
+
+    // non-numbers
+    assert_eval_eq!("(= 1 #t)", Err(Error::NotANumber(Sexpr::True)));
+    assert_eval_eq!("(= #t 1)", Err(Error::NotANumber(Sexpr::True)));
+
+    assert_eval_eq!("(< 1 #t)", Err(Error::NotANumber(Sexpr::True)));
+    assert_eval_eq!("(< #t 1)", Err(Error::NotANumber(Sexpr::True)));
+
+    assert_eval_eq!("(> 1 #t)", Err(Error::NotANumber(Sexpr::True)));
+    assert_eval_eq!("(> #t 1)", Err(Error::NotANumber(Sexpr::True)));
 }
 
 #[test]
@@ -366,7 +412,7 @@ fn iffn() {
     assert_eval_eq!("(if #t 1 (/ 'foo 'bar))", Ok(Integer(1)));
     assert_eval_eq!("(if #f (/ 'foo 'bar) 2)", Ok(Integer(2)));
     assert_eval_eq!("(if (= 2 2.0) 1 2)", Ok(Integer(1)));
-    assert_eval_eq!("(if (= #t #f) 1 2)", Ok(Integer(2)));
+    assert_eval_eq!("(if (equal? #t #f) 1 2)", Ok(Integer(2)));
 
     // errors
     assert_eval_eq!("(if #t)", Err(Error::WrongArgNum));

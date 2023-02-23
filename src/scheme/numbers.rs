@@ -29,7 +29,7 @@ pub fn rem(args: &Args, env: &mut Env) -> FuncResult {
         return Err(Error::WrongArgNum);
     }
     eval_iter(args, env)
-        .reduce(|acc, elem| acc.and_then(|a| elem.and_then(|e| a % e)))
+        .reduce(|acc, elem| acc? % elem?)
         .unwrap_or(Err(Error::WrongArgNum))
 }
 
@@ -99,6 +99,14 @@ pub fn is_float(args: &Args, env: &mut Env) -> FuncResult {
     )))
 }
 
+pub fn is_nan(args: &Args, env: &mut Env) -> FuncResult {
+    eval_one_arg(args, env).map(|sexpr| Sexpr::from(sexpr.is_nan()))
+}
+
+pub fn is_finite(args: &Args, env: &mut Env) -> FuncResult {
+    eval_one_arg(args, env).map(|sexpr| Sexpr::from(sexpr.is_finite()))
+}
+
 /// Fold the list
 /// - when `args` is empty, return `init`
 /// - when there is single element in `args`, return `func(init, arg)`
@@ -151,7 +159,7 @@ macro_rules! op {
     ( $float_func:tt | $int_func:tt $lhs:tt $rhs:tt ) => {{
         use Sexpr::{Float, Integer};
         match ($lhs, $rhs) {
-            (Integer(x), Integer(y)) => Ok(Integer(x.$int_func(y).ok_or(Error::Undefined)?)),
+            (Integer(x), Integer(y)) => Ok(x.$int_func(y).map(Integer).unwrap_or(Float(Flt::NAN))),
             (Integer(x), Float(y)) => Ok(Float((x as Flt).$float_func(y))),
             (Float(x), Integer(y)) => Ok(Float(x.$float_func(y as Flt))),
             (Float(x), Float(y)) => Ok(Float(x.$float_func(y))),
@@ -205,33 +213,35 @@ impl ops::Rem<Sexpr> for Sexpr {
     type Output = FuncResult;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        non_zero(rhs).and_then(|rhs| op!(rem_euclid | checked_rem_euclid self rhs))
+        op!(rem_euclid | checked_rem_euclid self rhs)
     }
 }
 
 impl Sexpr {
     #[inline]
     fn div_euclid(self, rhs: Self) -> FuncResult {
-        non_zero(rhs).and_then(|rhs| op!(div_euclid | checked_div_euclid self rhs))
+        op!(div_euclid | checked_div_euclid self rhs)
     }
-}
 
-#[inline]
-fn non_zero(num: Sexpr) -> FuncResult {
-    match num {
-        Sexpr::Float(num) => {
-            if num == 0.0 {
-                return Err(Error::Undefined);
-            }
+    /// It is numeric, but NaN or infinite
+    #[inline]
+    pub fn is_nan(self) -> bool {
+        match self {
+            Sexpr::Float(num) => num.is_nan() || num.is_infinite(),
+            Sexpr::Integer(_) => false,
+            _ => true,
         }
-        Sexpr::Integer(num) => {
-            if num == 0 {
-                return Err(Error::Undefined);
-            }
-        }
-        _ => return Err(Error::NotANumber(num)),
     }
-    Ok(num)
+
+    /// It is numeric and finite
+    #[inline]
+    pub fn is_finite(self) -> bool {
+        match self {
+            Sexpr::Float(num) => num.is_finite(),
+            Sexpr::Integer(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl std::cmp::PartialOrd for Sexpr {
@@ -317,11 +327,11 @@ mod tests {
         assert_eq!(Integer(5) % Float(2.0), Ok(Float(1.0)));
         assert_eq!(Float(5.0) % Integer(2), Ok(Float(1.0)));
         assert_eq!(Float(5.0) % Float(2.0), Ok(Float(1.0)));
-        assert_eq!(Integer(5) % Integer(0), Err(Error::Undefined));
-        assert_eq!(Integer(4) % Float(0.0), Err(Error::Undefined));
-        assert_eq!(Integer(5) % Float(0.0), Err(Error::Undefined));
-        assert_eq!(Float(5.0) % Integer(0), Err(Error::Undefined));
-        assert_eq!(Float(5.0) % Float(0.0), Err(Error::Undefined));
+        assert!((Integer(5) % Integer(0)).unwrap().is_nan());
+        assert!((Integer(4) % Float(0.0)).unwrap().is_nan());
+        assert!((Integer(5) % Float(0.0)).unwrap().is_nan());
+        assert!((Float(5.0) % Integer(0)).unwrap().is_nan());
+        assert!((Float(5.0) % Float(0.0)).unwrap().is_nan());
         assert_eq!(
             Float(5.0) % Sexpr::True,
             Err(Error::NotANumber(Sexpr::True))
@@ -331,17 +341,10 @@ mod tests {
             Err(Error::NotANumber(Sexpr::True))
         );
 
-        // underflows and overflows
-        assert_eq!(Sexpr::Integer(i64::MAX) + Integer(1), Err(Error::Undefined));
-        assert_eq!(Sexpr::Integer(i64::MIN) - Integer(1), Err(Error::Undefined));
-        assert_eq!(
-            Sexpr::Integer(i64::MAX) * Integer(10),
-            Err(Error::Undefined)
-        );
-        assert_eq!(
-            Sexpr::Integer(i64::MIN) * Integer(10),
-            Err(Error::Undefined)
-        );
+        assert!((Sexpr::Integer(i64::MAX) + Integer(1)).unwrap().is_nan());
+        assert!((Sexpr::Integer(i64::MIN) - Integer(1)).unwrap().is_nan());
+        assert!((Sexpr::Integer(i64::MAX) * Integer(10)).unwrap().is_nan());
+        assert!((Sexpr::Integer(i64::MIN) * Integer(10)).unwrap().is_nan());
     }
 
     #[test]
@@ -359,5 +362,28 @@ mod tests {
         assert_eq!(Float(5.0).partial_cmp(&Sexpr::True), None);
         assert_eq!(Sexpr::True.partial_cmp(&Integer(1)), None);
         assert_eq!(Integer(1).partial_cmp(&Sexpr::True), None);
+    }
+
+    #[test]
+    fn checkers() {
+        use Sexpr::*;
+
+        assert!(Float(Flt::NAN).is_nan());
+        assert!(Float(Flt::INFINITY).is_nan());
+        assert!(!Float(Flt::INFINITY).is_finite());
+        assert!(!Float(-Flt::INFINITY).is_finite());
+
+        assert!(Integer(10).is_finite());
+        assert!(!Integer(10).is_nan());
+        assert!(Float(3.14).is_finite());
+        assert!(!Float(3.14).is_nan());
+
+        assert!(True.is_nan());
+        assert!(False.is_nan());
+        assert!(Sexpr::symbol("10").is_nan());
+
+        assert!(!True.is_finite());
+        assert!(!False.is_finite());
+        assert!(!Sexpr::symbol("10").is_finite());
     }
 }

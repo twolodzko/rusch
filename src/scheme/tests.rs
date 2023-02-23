@@ -5,6 +5,7 @@ use crate::eval::eval;
 use crate::list::List;
 use crate::parser::read_sexpr;
 use crate::reader::StringReader;
+use crate::scheme;
 use crate::types::Sexpr;
 
 #[macro_export]
@@ -297,9 +298,15 @@ fn rem() {
     assert_eval_eq!("(% 1)", Err(Error::WrongArgNum));
     assert_eval_eq!("(% 1 'foo)", Err(Error::NotANumber(Sexpr::symbol("foo"))));
     assert_eval_eq!("(% \"1\" 2 3 4)", Err(Error::NotANumber(Sexpr::from("1"))));
-    assert_eval_eq!("(% 5 0)", Err(Error::Undefined));
-    assert_eval_eq!("(% 5 0.0)", Err(Error::Undefined));
-    assert_eval_eq!("(% 5.0 0.0)", Err(Error::Undefined));
+    assert!(parse_eval!("(% 5 0)", &mut scheme::root_env())
+        .unwrap()
+        .is_nan());
+    assert!(parse_eval!("(% 5 0.0)", &mut scheme::root_env())
+        .unwrap()
+        .is_nan());
+    assert!(parse_eval!("(% 5.0 0.0)", &mut scheme::root_env())
+        .unwrap()
+        .is_nan());
 }
 
 #[test]
@@ -323,8 +330,12 @@ fn div_euclid() {
     assert_eval_eq!("(//)", Err(Error::WrongArgNum));
     assert_eval_eq!("(// 1 'foo)", Err(Error::NotANumber(Sexpr::symbol("foo"))));
     assert_eval_eq!("(// \"1\" 2 3 4)", Err(Error::NotANumber(Sexpr::from("1"))));
-    assert_eval_eq!("(// 1 0)", Err(Error::Undefined));
-    assert_eval_eq!("(// 1 0.0)", Err(Error::Undefined));
+    assert!(parse_eval!("(// 1 0)", &mut scheme::root_env())
+        .unwrap()
+        .is_nan());
+    assert!(parse_eval!("(// 1 0.0)", &mut scheme::root_env())
+        .unwrap()
+        .is_nan());
 }
 
 #[test]

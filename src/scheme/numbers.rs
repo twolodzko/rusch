@@ -148,13 +148,13 @@ fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
 }
 
 macro_rules! op {
-    ( $func:tt | $int_func:tt $lhs:tt $rhs:tt ) => {{
+    ( $float_func:tt | $int_func:tt $lhs:tt $rhs:tt ) => {{
         use Sexpr::{Float, Integer};
         match ($lhs, $rhs) {
             (Integer(x), Integer(y)) => Ok(Integer(x.$int_func(y).ok_or(Error::Undefined)?)),
-            (Integer(x), Float(y)) => Ok(Float((x as Flt).$func(y))),
-            (Float(x), Integer(y)) => Ok(Float(x.$func(y as Flt))),
-            (Float(x), Float(y)) => Ok(Float(x.$func(y))),
+            (Integer(x), Float(y)) => Ok(Float((x as Flt).$float_func(y))),
+            (Float(x), Integer(y)) => Ok(Float(x.$float_func(y as Flt))),
+            (Float(x), Float(y)) => Ok(Float(x.$float_func(y))),
             (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
             (x, _) => Err(Error::NotANumber(x)),
         }
@@ -189,20 +189,15 @@ impl ops::Div<Sexpr> for Sexpr {
     type Output = FuncResult;
 
     fn div(self, rhs: Self) -> Self::Output {
-        #[inline]
-        fn divide(lhs: Sexpr, rhs: Sexpr) -> FuncResult {
-            use Sexpr::{Float, Integer};
-            match (lhs, rhs) {
-                (Integer(x), Integer(y)) => Ok(Float(x as Flt / y as Flt)),
-                (Integer(x), Float(y)) => Ok(Float(x as Flt / y)),
-                (Float(x), Integer(y)) => Ok(Float(x / y as Flt)),
-                (Float(x), Float(y)) => Ok(Float(x / y)),
-                (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
-                (x, _) => Err(Error::NotANumber(x)),
-            }
+        use Sexpr::{Float, Integer};
+        match (self, rhs) {
+            (Integer(x), Integer(y)) => Ok(Float(x as Flt / y as Flt)),
+            (Integer(x), Float(y)) => Ok(Float(x as Flt / y)),
+            (Float(x), Integer(y)) => Ok(Float(x / y as Flt)),
+            (Float(x), Float(y)) => Ok(Float(x / y)),
+            (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
+            (x, _) => Err(Error::NotANumber(x)),
         }
-
-        non_zero(rhs).and_then(|rhs| divide(self, rhs))
     }
 }
 
@@ -253,6 +248,8 @@ impl std::cmp::PartialOrd for Sexpr {
 
 #[cfg(test)]
 mod tests {
+    use crate::types::Flt;
+
     use super::Sexpr;
 
     #[test]
@@ -311,10 +308,10 @@ mod tests {
             Sexpr::True / Float(4.0),
             Err(Error::NotANumber(Sexpr::True))
         );
-        assert_eq!(Integer(5) / Integer(0), Err(Error::Undefined));
-        assert_eq!(Integer(5) / Float(0.0), Err(Error::Undefined));
-        assert_eq!(Float(5.0) / Integer(0), Err(Error::Undefined));
-        assert_eq!(Float(5.0) / Float(0.0), Err(Error::Undefined));
+        assert_eq!(Integer(5) / Integer(0), Ok(Float(Flt::INFINITY)));
+        assert_eq!(Integer(5) / Float(0.0), Ok(Float(Flt::INFINITY)));
+        assert_eq!(Float(5.0) / Integer(0), Ok(Float(Flt::INFINITY)));
+        assert_eq!(Float(5.0) / Float(0.0), Ok(Float(Flt::INFINITY)));
 
         assert_eq!(Integer(5) % Integer(2), Ok(Integer(1)));
         assert_eq!(Integer(5) % Float(2.0), Ok(Float(1.0)));

@@ -32,7 +32,7 @@ condition always evaluating to `#t`, e.g. `(cond (else 'yay))`.
 `(+ 2 2)` list.
 - `(eq? obj1 obj2)` compares if two objects are equal, `equal?` is just an alias for it.
 - Logical `(not obj)`, `and`, and `or`, e.g. `(and obj1 obj2 ...)`.
-- Arithmetic operators `+`, `-`, `*`, `/`, e.g. `(+ x1 x2 ...)`, and `%` for remainder [as defined in Rust].
+- Arithmetic operators `+`, `-`, `*`, `/`, e.g. `(+ x1 x2 ...)`, and `%` for Euclidean remainder [as defined in Rust].
   Those procedures promote integers to floats if any of the arguments is a float. Division `/` always promotes arguments
   to floats, for Euclidean division use `//`.
 - Numerical comparison operators `<`, `=`, `>`, e.g. `(< x1 x2 ...)`.

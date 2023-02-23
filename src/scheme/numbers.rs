@@ -148,26 +148,24 @@ fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
 }
 
 macro_rules! op {
-    ( $lhs:tt $op:tt $rhs:tt ) => {
-        {
-            use Sexpr::{Float, Integer};
-            match ($lhs, $rhs) {
-                (Integer(x), Integer(y)) => Ok(Integer(x $op y)),
-                (Integer(x), Float(y)) => Ok(Float(x as Flt $op y)),
-                (Float(x), Integer(y)) => Ok(Float(x $op y as Flt)),
-                (Float(x), Float(y)) => Ok(Float(x $op y)),
-                (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
-                (x, _) => Err(Error::NotANumber(x)),
-            }
+    ( $func:tt | $int_func:tt $lhs:tt $rhs:tt ) => {{
+        use Sexpr::{Float, Integer};
+        match ($lhs, $rhs) {
+            (Integer(x), Integer(y)) => Ok(Integer(x.$int_func(y).ok_or(Error::Undefined)?)),
+            (Integer(x), Float(y)) => Ok(Float((x as Flt).$func(y))),
+            (Float(x), Integer(y)) => Ok(Float(x.$func(y as Flt))),
+            (Float(x), Float(y)) => Ok(Float(x.$func(y))),
+            (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
+            (x, _) => Err(Error::NotANumber(x)),
         }
-    };
+    }};
 }
 
 impl ops::Add<Sexpr> for Sexpr {
     type Output = FuncResult;
 
     fn add(self, rhs: Self) -> Self::Output {
-        op!(self + rhs)
+        op!(add | checked_add self rhs)
     }
 }
 
@@ -175,7 +173,7 @@ impl ops::Sub<Sexpr> for Sexpr {
     type Output = FuncResult;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        op!(self - rhs)
+        op!(sub | checked_sub self rhs)
     }
 }
 
@@ -183,7 +181,7 @@ impl ops::Mul<Sexpr> for Sexpr {
     type Output = FuncResult;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        op!(self * rhs)
+        op!(mul | checked_mul self rhs)
     }
 }
 
@@ -191,36 +189,20 @@ impl ops::Div<Sexpr> for Sexpr {
     type Output = FuncResult;
 
     fn div(self, rhs: Self) -> Self::Output {
-        use Sexpr::{Float, Integer};
-        match (self, rhs) {
-            (Integer(x), Integer(y)) => (y as Flt).non_zero().map(|y| Float(x as Flt / y)),
-            (Integer(x), Float(y)) => y.non_zero().map(|y| Float(x as Flt / y)),
-            (Float(x), Integer(y)) => (y as Flt).non_zero().map(|y| Float(x / y)),
-            (Float(x), Float(y)) => y.non_zero().map(|y| Float(x / y)),
-            (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
-            (x, _) => Err(Error::NotANumber(x)),
+        #[inline]
+        fn divide(lhs: Sexpr, rhs: Sexpr) -> FuncResult {
+            use Sexpr::{Float, Integer};
+            match (lhs, rhs) {
+                (Integer(x), Integer(y)) => Ok(Float(x as Flt / y as Flt)),
+                (Integer(x), Float(y)) => Ok(Float(x as Flt / y)),
+                (Float(x), Integer(y)) => Ok(Float(x / y as Flt)),
+                (Float(x), Float(y)) => Ok(Float(x / y)),
+                (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
+                (x, _) => Err(Error::NotANumber(x)),
+            }
         }
-    }
-}
 
-macro_rules! non_zero_op {
-    ( $func:tt $lhs:tt $rhs:tt ) => {{
-        use Sexpr::{Float, Integer};
-        match ($lhs, $rhs) {
-            (Integer(x), Integer(y)) => y.non_zero().map(|y| Integer(x.$func(y))),
-            (Integer(x), Float(y)) => y.non_zero().map(|y| Float((x as Flt).$func(y))),
-            (Float(x), Integer(y)) => (y as Flt).non_zero().map(|y| Float(x.$func(y))),
-            (Float(x), Float(y)) => y.non_zero().map(|y| Float(x.$func(y))),
-            (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
-            (x, _) => Err(Error::NotANumber(x)),
-        }
-    }};
-}
-
-impl Sexpr {
-    #[inline]
-    fn div_euclid(self, rhs: Self) -> FuncResult {
-        non_zero_op!(div_euclid self rhs)
+        non_zero(rhs).and_then(|rhs| divide(self, rhs))
     }
 }
 
@@ -228,8 +210,33 @@ impl ops::Rem<Sexpr> for Sexpr {
     type Output = FuncResult;
 
     fn rem(self, rhs: Self) -> Self::Output {
-        non_zero_op!(rem self rhs)
+        non_zero(rhs).and_then(|rhs| op!(rem_euclid | checked_rem_euclid self rhs))
     }
+}
+
+impl Sexpr {
+    #[inline]
+    fn div_euclid(self, rhs: Self) -> FuncResult {
+        non_zero(rhs).and_then(|rhs| op!(div_euclid | checked_div_euclid self rhs))
+    }
+}
+
+#[inline]
+fn non_zero(num: Sexpr) -> FuncResult {
+    match num {
+        Sexpr::Float(num) => {
+            if num == 0.0 {
+                return Err(Error::Undefined);
+            }
+        }
+        Sexpr::Integer(num) => {
+            if num == 0 {
+                return Err(Error::Undefined);
+            }
+        }
+        _ => return Err(Error::NotANumber(num)),
+    }
+    Ok(num)
 }
 
 impl std::cmp::PartialOrd for Sexpr {
@@ -241,30 +248,6 @@ impl std::cmp::PartialOrd for Sexpr {
             (Sexpr::Float(x), Sexpr::Float(y)) => x.partial_cmp(y),
             _ => None,
         }
-    }
-}
-
-trait NonZero<T> {
-    fn non_zero(self) -> Result<T, Error<Sexpr>>;
-}
-
-impl NonZero<Int> for Int {
-    #[inline]
-    fn non_zero(self) -> Result<Int, Error<Sexpr>> {
-        if self == 0 {
-            return Err(Error::Undefined);
-        }
-        Ok(self)
-    }
-}
-
-impl NonZero<Flt> for Flt {
-    #[inline]
-    fn non_zero(self) -> Result<Flt, Error<Sexpr>> {
-        if self == 0.0 {
-            return Err(Error::Undefined);
-        }
-        Ok(self)
     }
 }
 
@@ -328,7 +311,6 @@ mod tests {
             Sexpr::True / Float(4.0),
             Err(Error::NotANumber(Sexpr::True))
         );
-
         assert_eq!(Integer(5) / Integer(0), Err(Error::Undefined));
         assert_eq!(Integer(5) / Float(0.0), Err(Error::Undefined));
         assert_eq!(Float(5.0) / Integer(0), Err(Error::Undefined));
@@ -339,6 +321,7 @@ mod tests {
         assert_eq!(Float(5.0) % Integer(2), Ok(Float(1.0)));
         assert_eq!(Float(5.0) % Float(2.0), Ok(Float(1.0)));
         assert_eq!(Integer(5) % Integer(0), Err(Error::Undefined));
+        assert_eq!(Integer(4) % Float(0.0), Err(Error::Undefined));
         assert_eq!(Integer(5) % Float(0.0), Err(Error::Undefined));
         assert_eq!(Float(5.0) % Integer(0), Err(Error::Undefined));
         assert_eq!(Float(5.0) % Float(0.0), Err(Error::Undefined));
@@ -349,6 +332,18 @@ mod tests {
         assert_eq!(
             Sexpr::True % Float(5.0),
             Err(Error::NotANumber(Sexpr::True))
+        );
+
+        // underflows and overflows
+        assert_eq!(Sexpr::Integer(i64::MAX) + Integer(1), Err(Error::Undefined));
+        assert_eq!(Sexpr::Integer(i64::MIN) - Integer(1), Err(Error::Undefined));
+        assert_eq!(
+            Sexpr::Integer(i64::MAX) * Integer(10),
+            Err(Error::Undefined)
+        );
+        assert_eq!(
+            Sexpr::Integer(i64::MIN) * Integer(10),
+            Err(Error::Undefined)
         );
     }
 

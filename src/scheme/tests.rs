@@ -819,29 +819,6 @@ fn begin() {
 }
 
 #[test]
-fn fibo_vanilla() {
-    let env = &mut root_env();
-
-    assert!(parse_eval!(
-        "(define fibo (lambda (n)
-                (if (= n 0) 0
-                    (if (= n 1) 1
-                        (+ (fibo (- n 1))
-                        (fibo (- n 2)))))))",
-        env
-    )
-    .is_ok());
-
-    assert_eq!(parse_eval!("(fibo 0)", env), Ok(Sexpr::Integer(0)));
-    assert_eq!(parse_eval!("(fibo 1)", env), Ok(Sexpr::Integer(1)));
-    assert_eq!(parse_eval!("(fibo 2)", env), Ok(Sexpr::Integer(1)));
-    assert_eq!(parse_eval!("(fibo 3)", env), Ok(Sexpr::Integer(2)));
-    assert_eq!(parse_eval!("(fibo 7)", env), Ok(Sexpr::Integer(13)));
-    assert_eq!(parse_eval!("(fibo 9)", env), Ok(Sexpr::Integer(34)));
-    assert_eq!(parse_eval!("(fibo 10)", env), Ok(Sexpr::Integer(55)));
-}
-
-#[test]
 fn reverse() {
     assert_eval_eq!("(reverse '())", Ok(Sexpr::null()));
     assert_eval_eq!(
@@ -873,6 +850,29 @@ fn load() {
 }
 
 #[test]
+fn fibo_vanilla() {
+    let env = &mut root_env();
+
+    assert!(parse_eval!(
+        "(define fibo (lambda (n)
+                (if (= n 0) 0
+                    (if (= n 1) 1
+                        (+ (fibo (- n 1))
+                        (fibo (- n 2)))))))",
+        env
+    )
+    .is_ok());
+
+    assert_eq!(parse_eval!("(fibo 0)", env), Ok(Sexpr::Integer(0)));
+    assert_eq!(parse_eval!("(fibo 1)", env), Ok(Sexpr::Integer(1)));
+    assert_eq!(parse_eval!("(fibo 2)", env), Ok(Sexpr::Integer(1)));
+    assert_eq!(parse_eval!("(fibo 3)", env), Ok(Sexpr::Integer(2)));
+    assert_eq!(parse_eval!("(fibo 7)", env), Ok(Sexpr::Integer(13)));
+    assert_eq!(parse_eval!("(fibo 9)", env), Ok(Sexpr::Integer(34)));
+    assert_eq!(parse_eval!("(fibo 10)", env), Ok(Sexpr::Integer(55)));
+}
+
+#[test]
 fn fibo_tail_recur() {
     let env = &mut root_env();
 
@@ -893,8 +893,6 @@ fn fibo_tail_recur() {
     assert_eq!(parse_eval!("(fibo 9)", env), Ok(Sexpr::Integer(34)));
     assert_eq!(parse_eval!("(fibo 10)", env), Ok(Sexpr::Integer(55)));
 
-    // this would fail without tail-call optimization
-    // using floats, so there is no overflow error
-    assert!(parse_eval!("(define fibo (lambda (n) (impl n 1.0 0.0)))", env).is_ok());
-    let _ = parse_eval!("(fibo 100)", env);
+    // the result is NaN, but this would fail without tail-call optimization
+    let _ = parse_eval!("(fibo 1000)", env);
 }

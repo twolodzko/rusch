@@ -3,7 +3,7 @@ use std::ops;
 
 use super::utils::*;
 use crate::errors::Error;
-use crate::types::{Args, Env, FuncResult, Sexpr};
+use crate::types::{Args, Env, Flt, FuncResult, Int, Sexpr};
 
 pub fn add(args: &Args, env: &mut Env) -> FuncResult {
     list_reduce(args, env, Sexpr::Integer(0), |x, y| x + y)
@@ -56,8 +56,8 @@ pub fn to_integer(args: &Args, env: &mut Env) -> FuncResult {
     let sexpr = eval_one_arg(args, env)?;
     match &sexpr {
         Sexpr::Integer(_) => Ok(sexpr),
-        Sexpr::Float(number) => Ok(Sexpr::Integer(*number as i64)),
-        Sexpr::String(string) => match string.parse::<i64>() {
+        Sexpr::Float(number) => Ok(Sexpr::Integer(*number as Int)),
+        Sexpr::String(string) => match string.parse::<Int>() {
             Ok(number) => Ok(Sexpr::Integer(number)),
             Err(_) => Err(Error::CannotParse(sexpr)),
         },
@@ -69,8 +69,8 @@ pub fn to_float(args: &Args, env: &mut Env) -> FuncResult {
     let sexpr = eval_one_arg(args, env)?;
     match &sexpr {
         Sexpr::Float(_) => Ok(sexpr),
-        Sexpr::Integer(number) => Ok(Sexpr::Float(*number as f64)),
-        Sexpr::String(string) => match string.parse::<f64>() {
+        Sexpr::Integer(number) => Ok(Sexpr::Float(*number as Flt)),
+        Sexpr::String(string) => match string.parse::<Flt>() {
             Ok(number) => Ok(Sexpr::Float(number)),
             Err(_) => Err(Error::CannotParse(sexpr)),
         },
@@ -153,8 +153,8 @@ macro_rules! op {
             use Sexpr::{Float, Integer};
             match ($lhs, $rhs) {
                 (Integer(x), Integer(y)) => Ok(Integer(x $op y)),
-                (Integer(x), Float(y)) => Ok(Float(x as f64 $op y)),
-                (Float(x), Integer(y)) => Ok(Float(x $op y as f64)),
+                (Integer(x), Float(y)) => Ok(Float(x as Flt $op y)),
+                (Float(x), Integer(y)) => Ok(Float(x $op y as Flt)),
                 (Float(x), Float(y)) => Ok(Float(x $op y)),
                 (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
                 (x, _) => Err(Error::NotANumber(x)),
@@ -193,9 +193,9 @@ impl ops::Div<Sexpr> for Sexpr {
     fn div(self, rhs: Self) -> Self::Output {
         use Sexpr::{Float, Integer};
         match (self, rhs) {
-            (Integer(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x as f64 / y)),
-            (Integer(x), Float(y)) => y.non_zero().map(|y| Float(x as f64 / y)),
-            (Float(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x / y)),
+            (Integer(x), Integer(y)) => (y as Flt).non_zero().map(|y| Float(x as Flt / y)),
+            (Integer(x), Float(y)) => y.non_zero().map(|y| Float(x as Flt / y)),
+            (Float(x), Integer(y)) => (y as Flt).non_zero().map(|y| Float(x / y)),
             (Float(x), Float(y)) => y.non_zero().map(|y| Float(x / y)),
             (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
             (x, _) => Err(Error::NotANumber(x)),
@@ -208,8 +208,8 @@ macro_rules! non_zero_op {
         use Sexpr::{Float, Integer};
         match ($lhs, $rhs) {
             (Integer(x), Integer(y)) => y.non_zero().map(|y| Integer(x.$func(y))),
-            (Integer(x), Float(y)) => y.non_zero().map(|y| Float((x as f64).$func(y))),
-            (Float(x), Integer(y)) => (y as f64).non_zero().map(|y| Float(x.$func(y))),
+            (Integer(x), Float(y)) => y.non_zero().map(|y| Float((x as Flt).$func(y))),
+            (Float(x), Integer(y)) => (y as Flt).non_zero().map(|y| Float(x.$func(y))),
             (Float(x), Float(y)) => y.non_zero().map(|y| Float(x.$func(y))),
             (Float(_) | Integer(_), y) => Err(Error::NotANumber(y)),
             (x, _) => Err(Error::NotANumber(x)),
@@ -236,8 +236,8 @@ impl std::cmp::PartialOrd for Sexpr {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
             (Sexpr::Integer(x), Sexpr::Integer(y)) => x.partial_cmp(y),
-            (Sexpr::Integer(x), Sexpr::Float(y)) => (*x as f64).partial_cmp(y),
-            (Sexpr::Float(x), Sexpr::Integer(y)) => x.partial_cmp(&(*y as f64)),
+            (Sexpr::Integer(x), Sexpr::Float(y)) => (*x as Flt).partial_cmp(y),
+            (Sexpr::Float(x), Sexpr::Integer(y)) => x.partial_cmp(&(*y as Flt)),
             (Sexpr::Float(x), Sexpr::Float(y)) => x.partial_cmp(y),
             _ => None,
         }
@@ -248,9 +248,9 @@ trait NonZero<T> {
     fn non_zero(self) -> Result<T, Error<Sexpr>>;
 }
 
-impl NonZero<i64> for i64 {
+impl NonZero<Int> for Int {
     #[inline]
-    fn non_zero(self) -> Result<i64, Error<Sexpr>> {
+    fn non_zero(self) -> Result<Int, Error<Sexpr>> {
         if self == 0 {
             return Err(Error::Undefined);
         }
@@ -258,9 +258,9 @@ impl NonZero<i64> for i64 {
     }
 }
 
-impl NonZero<f64> for f64 {
+impl NonZero<Flt> for Flt {
     #[inline]
-    fn non_zero(self) -> Result<f64, Error<Sexpr>> {
+    fn non_zero(self) -> Result<Flt, Error<Sexpr>> {
         if self == 0.0 {
             return Err(Error::Undefined);
         }

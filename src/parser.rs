@@ -1,7 +1,7 @@
 use crate::errors::ReadError;
 use crate::list::List;
 use crate::reader::Reader;
-use crate::types::Sexpr;
+use crate::types::{Flt, Int, Sexpr};
 
 /// Read a single S-expression using the reader
 pub fn read_sexpr(r: &mut impl Reader) -> Result<Sexpr, ReadError> {
@@ -52,9 +52,9 @@ fn parse_word(word: String) -> Sexpr {
 }
 
 fn number_or_symbol(word: String) -> Sexpr {
-    if let Ok(num) = word.parse::<i64>() {
+    if let Ok(num) = word.parse::<Int>() {
         Sexpr::Integer(num)
-    } else if let Ok(num) = word.parse::<f64>() {
+    } else if let Ok(num) = word.parse::<Flt>() {
         Sexpr::Float(num)
     } else {
         Sexpr::Symbol(word)

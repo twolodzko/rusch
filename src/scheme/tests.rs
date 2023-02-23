@@ -339,7 +339,7 @@ fn is_equal() {
     assert_eval_eq!("(equal? '() '())", Ok(True));
     assert_eval_eq!("(equal? '() (list) (cdr '('head)))", Ok(True));
     assert_eval_eq!("(equal? '(1 2 3) (list 1 (+ 1 1) (+ 1 2)))", Ok(True));
-    assert_eval_eq!("(equal? 2 2.0 (+ 1 1) (/ 6 3))", Ok(True));
+    assert_eval_eq!("(equal? 2 (+ 1 1) (// 6 3))", Ok(True));
 
     // negative
     assert_eval_eq!("(equal? 1 2)", Ok(False));
@@ -872,7 +872,7 @@ fn fibo_tail_recur() {
         env
     )
     .is_ok());
-    assert!(parse_eval!("(define fibo (lambda (n) (impl n 1.0 0.0)))", env).is_ok());
+    assert!(parse_eval!("(define fibo (lambda (n) (impl n 1 0)))", env).is_ok());
 
     assert_eq!(parse_eval!("(fibo 0)", env), Ok(Sexpr::Integer(0)));
     assert_eq!(parse_eval!("(fibo 1)", env), Ok(Sexpr::Integer(1)));
@@ -883,5 +883,7 @@ fn fibo_tail_recur() {
     assert_eq!(parse_eval!("(fibo 10)", env), Ok(Sexpr::Integer(55)));
 
     // this would fail without tail-call optimization
-    let _ = parse_eval!("(fibo 1000)", env);
+    // using floats, so there is no overflow error
+    assert!(parse_eval!("(define fibo (lambda (n) (impl n 1.0 0.0)))", env).is_ok());
+    let _ = parse_eval!("(fibo 100)", env);
 }

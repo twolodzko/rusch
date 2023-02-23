@@ -8,8 +8,8 @@ pub enum Sexpr {
     True,
     False,
     Symbol(String),
-    Integer(i64),
-    Float(f64),
+    Integer(Int),
+    Float(Flt),
     String(String),
     List(List<Sexpr>),
     Func(Func),
@@ -17,6 +17,9 @@ pub enum Sexpr {
     Lambda(Box<Lambda>),
     Nil,
 }
+
+pub type Int = i64;
+pub type Flt = f64;
 
 pub type Args = List<Sexpr>;
 pub type Env = envir::Env<Sexpr>;
@@ -105,8 +108,6 @@ impl std::cmp::PartialEq for Sexpr {
             // numbers
             (Integer(s), Integer(o)) => s == o,
             (Float(s), Float(o)) => s == o,
-            (Integer(s), Float(o)) => &(*s as f64) == o,
-            (Float(s), Integer(o)) => s == &(*o as f64),
             // lists
             (List(s), List(o)) => s == o,
             // functions are compared by memory addresses
@@ -320,8 +321,8 @@ mod tests {
         assert!(Integer(42) == Integer(42));
         assert!(Integer(42) != Integer(43));
         assert!(Float(3.14) == Float(3.14));
-        assert!(Float(1.0) == Integer(1));
-        assert!(Integer(1) == Float(1.0));
+        assert!(Float(1.0) != Integer(1));
+        assert!(Integer(1) != Float(1.0));
         assert!(Integer(1) != Sexpr::symbol("1"));
         assert!(Sexpr::symbol("1") != Integer(1));
 

@@ -9,7 +9,7 @@ pub enum Error<T> {
     WrongArgNum,
     CannotParse(T),
     Custom(String),
-    ReadError(String),
+    ReadError(ReadError),
     Undefined,
 }
 
@@ -39,7 +39,7 @@ where
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum ReadError {
     EndOfInput,
     Unexpected(char),

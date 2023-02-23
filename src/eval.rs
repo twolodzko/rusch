@@ -52,14 +52,14 @@ pub fn eval_but_last(args: &Args, env: &mut Env) -> TcoResult {
 }
 
 pub fn eval_file(filename: &str, env: &mut Env) -> FuncResult {
-    let mut reader = FileReader::from(filename).map_err(|msg| Error::ReadError(msg.to_string()))?;
+    let mut reader = FileReader::from(filename).map_err(Error::ReadError)?;
 
     let mut last = Sexpr::Nil;
     loop {
         match read_sexpr(&mut reader) {
             Ok(ref sexpr) => last = eval(sexpr, env)?,
             Err(ReadError::EndOfInput) => break,
-            Err(msg) => return Err(Error::ReadError(msg.to_string())),
+            Err(msg) => return Err(Error::ReadError(msg)),
         }
     }
     Ok(last)

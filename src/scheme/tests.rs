@@ -455,18 +455,18 @@ fn define() {
     let mut env = root_env();
 
     assert!(parse_eval!("(define x 'foo)", &mut env).is_ok());
-    assert_eq!(env.get(&String::from("x")), Some(Sexpr::symbol("foo")));
+    assert_eq!(env.get("x"), Some(Sexpr::symbol("foo")));
 
     assert!(parse_eval!("(define x 'bar)", &mut env).is_ok());
-    assert_eq!(env.get(&String::from("x")), Some(Sexpr::symbol("bar")));
+    assert_eq!(env.get("x"), Some(Sexpr::symbol("bar")));
 
     assert!(parse_eval!("(define y x)", &mut env).is_ok());
-    assert_eq!(env.get(&String::from("y")), Some(Sexpr::symbol("bar")));
+    assert_eq!(env.get("y"), Some(Sexpr::symbol("bar")));
 
     assert!(parse_eval!("(define y (+ 2 (/ 4 2)))", &mut env).is_ok());
-    assert_eq!(env.get(&String::from("y")), Some(Sexpr::Float(4.0)));
+    assert_eq!(env.get("y"), Some(Sexpr::Float(4.0)));
 
-    assert_eq!(env.get(&String::from("x")), Some(Sexpr::symbol("bar")));
+    assert_eq!(env.get("x"), Some(Sexpr::symbol("bar")));
 
     // errors
     assert_eq!(
@@ -487,13 +487,13 @@ fn define_function() {
 
     assert!(parse_eval!("(define (yes) #t)", &mut env).is_ok());
     assert_eq!(
-        env.get(&String::from("yes")),
+        env.get("yes"),
         Some(lambda_init(&List::empty(), &List::from(vec![Sexpr::True]), &mut env).unwrap())
     );
 
     assert!(parse_eval!("(define (add1 x) (+ x 1))", &mut env).is_ok());
     assert_eq!(
-        env.get(&String::from("add1")),
+        env.get("add1"),
         Some(
             lambda_init(
                 &List::from(vec![Sexpr::symbol("x")]),
@@ -510,7 +510,7 @@ fn define_function() {
 
     assert!(parse_eval!("(define (foo x y) (display x '+ y '=) (+ x y))", &mut env).is_ok());
     assert_eq!(
-        env.get(&String::from("foo")),
+        env.get("foo"),
         Some(
             lambda_init(
                 &List::from(vec![Sexpr::symbol("x"), Sexpr::symbol("y")]),
@@ -755,18 +755,18 @@ fn conversions() {
 fn set() {
     let root = &mut root_env();
     let mut local1 = root.branch();
-    local1.insert(&String::from("foo"), Sexpr::Integer(42));
+    local1.insert("foo", Sexpr::Integer(42));
     let mut local2 = local1.branch();
 
-    assert_eq!(local2.get(&String::from("foo")), Some(Sexpr::Integer(42)));
+    assert_eq!(local2.get("foo"), Some(Sexpr::Integer(42)));
     assert_eq!(
         parse_eval!("(set! foo (car (list 'bar)))", &mut local2),
         Ok(Sexpr::Nil)
     );
 
-    assert_eq!(local2.get(&String::from("foo")), Some(Sexpr::symbol("bar")));
-    assert_eq!(local1.get(&String::from("foo")), Some(Sexpr::symbol("bar")));
-    assert_eq!(root.get(&String::from("foo")), None);
+    assert_eq!(local2.get("foo"), Some(Sexpr::symbol("bar")));
+    assert_eq!(local1.get("foo"), Some(Sexpr::symbol("bar")));
+    assert_eq!(root.get("foo"), None);
 
     assert_eq!(
         parse_eval!("(set! pi 3.14)", &mut local2),
@@ -805,7 +805,7 @@ fn begin() {
         parse_eval!("(begin (define foo 'bar) (+ 5 6) (+ 2 2))", root),
         Ok(Sexpr::Integer(4))
     );
-    assert_eq!(root.get(&String::from("foo")), Some(Sexpr::symbol("bar")));
+    assert_eq!(root.get("foo"), Some(Sexpr::symbol("bar")));
 
     // break evaluation on error
     assert_eq!(
@@ -815,7 +815,7 @@ fn begin() {
         ),
         Err(Error::from("expected"))
     );
-    assert_eq!(root.get(&String::from("dont")), None);
+    assert_eq!(root.get("dont"), None);
 }
 
 #[test]
@@ -846,7 +846,7 @@ fn load() {
         parse_eval!("(load \"examples/simple.scm\")", env),
         Ok(Sexpr::Integer(321))
     );
-    assert_eq!(env.get(&String::from("x")), Some(Sexpr::Integer(1)));
+    assert_eq!(env.get("x"), Some(Sexpr::Integer(1)));
 }
 
 #[test]

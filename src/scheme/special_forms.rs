@@ -23,9 +23,9 @@ fn qq_eval(sexpr: &Sexpr, env: &mut Env, quotes: i32) -> FuncResult {
         _ => return Ok(sexpr.clone()),
     };
     if let Some(Sexpr::Symbol(name)) = list.head() {
-        if name == &String::from("unquote") {
+        if name == "unquote" {
             *quotes -= 1
-        } else if name == &String::from("quasiquote") {
+        } else if name == "quasiquote" {
             *quotes += 1
         }
     };
@@ -80,7 +80,7 @@ pub fn condfn(args: &Args, env: &mut Env) -> TcoResult {
 
 pub fn define(args: &Args, env: &mut Env) -> FuncResult {
     #[inline]
-    fn from_symbol(key: &String, rest: &List<Sexpr>, env: &mut Env) -> FuncResult {
+    fn from_symbol(key: &str, rest: &List<Sexpr>, env: &mut Env) -> FuncResult {
         if rest.has_next() {
             return Err(Error::WrongArgNum);
         }
@@ -188,7 +188,7 @@ fn let_impl(bindings: &Args, body: &Args, call_env: &mut Env, eval_env: &mut Env
 }
 
 #[inline]
-fn named_let(key: &String, bindings: &Args, body: &Args, env: &mut Env) -> TcoResult {
+fn named_let(key: &str, bindings: &Args, body: &Args, env: &mut Env) -> TcoResult {
     let local = &mut env.branch();
 
     let vars: Result<Vec<String>, Error<Sexpr>> = bindings

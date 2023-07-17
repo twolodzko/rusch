@@ -34,14 +34,14 @@ where
 
     /// Save key-value pair to the environment
     #[inline]
-    pub fn insert(&mut self, key: &String, val: T) {
+    pub fn insert(&mut self, key: &str, val: T) {
         let mut env = self.unwrap().borrow_mut();
         env.local.insert(key.to_string(), val);
     }
 
     /// Get (recursively) value associated with the key if available
     #[inline]
-    pub fn get(&self, key: &String) -> Option<T> {
+    pub fn get(&self, key: &str) -> Option<T> {
         let env = self.unwrap().borrow();
         if let Some(val) = env.local.get(key) {
             Some(val.clone())
@@ -55,7 +55,7 @@ where
 
     /// Find (recursively) the enviroment that has some value associated with the key
     #[inline]
-    pub fn find_env(&self, key: &String) -> Option<Self> {
+    pub fn find_env(&self, key: &str) -> Option<Self> {
         let env = self.unwrap().borrow();
         if env.local.get(key).is_some() {
             Some(self.clone())
@@ -81,7 +81,7 @@ where
     fn from(records: [(&str, T); N]) -> Self {
         let mut env: Env<T> = Env::new();
         for (key, val) in records.iter() {
-            env.insert(&String::from(*key), val.clone());
+            env.insert(key, val.clone());
         }
         env
     }
@@ -117,52 +117,49 @@ mod tests {
     #[test]
     fn insert() {
         let mut env = Env::<Sexpr>::new();
-        assert_eq!(env.get(&String::from("foo")), None);
+        assert_eq!(env.get("foo"), None);
 
-        env.insert(&String::from("foo"), Sexpr::Integer(42));
-        assert_eq!(env.get(&String::from("foo")), Some(Sexpr::Integer(42)));
+        env.insert("foo", Sexpr::Integer(42));
+        assert_eq!(env.get("foo"), Some(Sexpr::Integer(42)));
 
-        env.insert(&String::from("bar"), Sexpr::True);
-        assert_eq!(env.get(&String::from("foo")), Some(Sexpr::Integer(42)));
-        assert_eq!(env.get(&String::from("bar")), Some(Sexpr::True));
+        env.insert("bar", Sexpr::True);
+        assert_eq!(env.get("foo"), Some(Sexpr::Integer(42)));
+        assert_eq!(env.get("bar"), Some(Sexpr::True));
 
-        env.insert(&String::from("foo"), Sexpr::String(String::from("ok?")));
-        assert_eq!(
-            env.get(&String::from("foo")),
-            Some(Sexpr::String(String::from("ok?")))
-        );
+        env.insert("foo", Sexpr::String(String::from("ok?")));
+        assert_eq!(env.get("foo"), Some(Sexpr::String(String::from("ok?"))));
     }
 
     #[test]
     fn branch() {
         let mut root = Env::new();
-        root.insert(&String::from("foo"), Sexpr::Integer(42));
+        root.insert("foo", Sexpr::Integer(42));
 
         {
             let mut local = root.branch();
-            assert_eq!(root.get(&String::from("foo")), Some(Sexpr::Integer(42)));
-            assert_eq!(local.get(&String::from("foo")), Some(Sexpr::Integer(42)));
+            assert_eq!(root.get("foo"), Some(Sexpr::Integer(42)));
+            assert_eq!(local.get("foo"), Some(Sexpr::Integer(42)));
 
-            local.insert(&String::from("foo"), Sexpr::True);
-            assert_eq!(root.get(&String::from("foo")), Some(Sexpr::Integer(42)));
-            assert_eq!(local.get(&String::from("foo")), Some(Sexpr::True));
+            local.insert("foo", Sexpr::True);
+            assert_eq!(root.get("foo"), Some(Sexpr::Integer(42)));
+            assert_eq!(local.get("foo"), Some(Sexpr::True));
         }
 
-        assert_eq!(root.get(&String::from("foo")), Some(Sexpr::Integer(42)));
+        assert_eq!(root.get("foo"), Some(Sexpr::Integer(42)));
     }
 
     #[test]
     fn find_env() {
         let mut root = Env::new();
-        root.insert(&String::from("foo"), &Sexpr::Integer(42));
+        root.insert("foo", &Sexpr::Integer(42));
 
-        assert_eq!(root.find_env(&String::from("foo")), Some(root.clone()));
+        assert_eq!(root.find_env("foo"), Some(root.clone()));
 
         let local1 = root.branch();
-        assert_eq!(local1.find_env(&String::from("foo")), Some(root.clone()));
+        assert_eq!(local1.find_env("foo"), Some(root.clone()));
 
         let local2 = local1.branch();
-        assert_eq!(local2.find_env(&String::from("foo")), Some(root.clone()));
+        assert_eq!(local2.find_env("foo"), Some(root.clone()));
     }
 
     #[test]
@@ -172,10 +169,10 @@ mod tests {
             ("bar", Sexpr::symbol("hello")),
             ("baz", Sexpr::True),
         ]);
-        assert_eq!(env.get(&String::from("foo")), Some(Sexpr::Integer(1)));
-        assert_eq!(env.get(&String::from("bar")), Some(Sexpr::symbol("hello")));
-        assert_eq!(env.get(&String::from("baz")), Some(Sexpr::True));
-        assert_eq!(env.get(&String::from("WRONG")), None);
+        assert_eq!(env.get("foo"), Some(Sexpr::Integer(1)));
+        assert_eq!(env.get("bar"), Some(Sexpr::symbol("hello")));
+        assert_eq!(env.get("baz"), Some(Sexpr::True));
+        assert_eq!(env.get("WRONG"), None);
     }
 
     #[test]

@@ -110,8 +110,8 @@ mod tests {
     #[test]
     fn symbols() {
         let mut env = envir::Env::new();
-        env.insert(&String::from("true"), Sexpr::True);
-        env.insert(&String::from("foo"), Sexpr::symbol("bar"));
+        env.insert("true", Sexpr::True);
+        env.insert("foo", Sexpr::symbol("bar"));
 
         assert_eq!(eval(&Sexpr::symbol("true"), &mut env), Ok(Sexpr::True));
         assert_eq!(
@@ -138,7 +138,7 @@ mod tests {
     #[test]
     fn not_callable_list() {
         let mut env = envir::Env::new();
-        env.insert(&String::from("x"), Sexpr::Integer(42));
+        env.insert("x", Sexpr::Integer(42));
 
         // (x #t #f) => (42 #t #f) => Err
         assert_eq!(
@@ -154,7 +154,7 @@ mod tests {
     fn simple_function() {
         let mut env = envir::Env::new();
         env.insert(
-            &String::from("first"),
+            "first",
             Sexpr::Func(|args, &mut _| Ok(args.head().unwrap().clone())),
         );
         // (fitst 1 2) => 1
@@ -187,8 +187,8 @@ mod tests {
     #[test]
     fn iterator() {
         let mut env = envir::Env::new();
-        env.insert(&String::from("a"), Sexpr::Integer(1));
-        env.insert(&String::from("b"), Sexpr::Integer(2));
+        env.insert("a", Sexpr::Integer(1));
+        env.insert("b", Sexpr::Integer(2));
 
         let list = List::from(vec![
             Sexpr::symbol("a"),

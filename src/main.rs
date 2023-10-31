@@ -1,11 +1,13 @@
+use rusch::{
+    envir::Env,
+    errors::ReadError,
+    eval::{eval, eval_file},
+    parser::read_sexpr,
+    reader::StdinReader,
+    scheme::root_env,
+    types::Sexpr,
+};
 use std::env;
-
-use rusch::envir::Env;
-use rusch::eval::{eval, eval_file};
-use rusch::parser::read_sexpr;
-use rusch::reader::StdinReader;
-use rusch::scheme::root_env;
-use rusch::types::Sexpr;
 
 fn eval_and_print(sexpr: &Sexpr, env: &mut Env<Sexpr>) {
     match eval(sexpr, env) {
@@ -19,24 +21,32 @@ fn eval_and_print(sexpr: &Sexpr, env: &mut Env<Sexpr>) {
 }
 
 fn main() {
-    let args = &mut env::args().skip(1);
-
+    let args: Vec<String> = env::args().collect();
     let env = &mut root_env();
 
-    if args.len() == 0 {
+    if args.len() < 2 {
         println!("Press ^C to exit.\n");
 
         let reader = &mut StdinReader::new().unwrap();
         loop {
             match read_sexpr(reader) {
                 Ok(ref sexpr) => eval_and_print(sexpr, env),
+                Err(ReadError::Interrupted) => std::process::exit(0),
                 Err(msg) => println!("Error: {}", msg),
             }
         }
     }
 
-    for arg in args {
-        match eval_file(&arg, env) {
+    if &args[1] == "-h" || &args[1] == "--help" {
+        println!(
+            "Usage: {} [FILE]...\n\nIf no files are given, opens REPL.",
+            args[0]
+        );
+        return;
+    }
+
+    for arg in args.iter().skip(1) {
+        match eval_file(arg, env) {
             Ok(_) => (),
             Err(msg) => panic!("{}", msg),
         }

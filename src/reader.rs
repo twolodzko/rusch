@@ -1,7 +1,8 @@
 use crate::errors::ReadError;
+use rustyline::{Config, DefaultEditor};
 use std::fs::File;
-use std::io;
-use std::io::{BufRead, BufReader, Lines, Write};
+
+use std::io::{BufRead, BufReader, Lines};
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
@@ -19,6 +20,10 @@ impl StringReader {
         StringReader {
             cache: s.chars().collect::<Vec<_>>().into_iter().peekable(),
         }
+    }
+
+    fn empty() -> StringReader {
+        StringReader::from("")
     }
 }
 
@@ -77,24 +82,27 @@ impl Reader for FileReader {
 }
 
 pub struct StdinReader {
-    iter: StringReader,
+    reader: DefaultEditor,
+    buffer: StringReader,
 }
 
 impl StdinReader {
     pub fn new() -> Result<Self, ReadError> {
+        let config = Config::builder().auto_add_history(true).build();
+        let reader = match DefaultEditor::with_config(config) {
+            Ok(editor) => editor,
+            Err(msg) => return Err(ReadError::IoError(msg.to_string())),
+        };
         Ok(StdinReader {
-            iter: StdinReader::next_line()?,
+            reader,
+            buffer: StringReader::empty(),
         })
     }
 
-    fn next_line() -> Result<StringReader, ReadError> {
-        print!("> ");
-        let _ = io::stdout().flush();
-
-        let mut buffer = String::new();
-        match io::stdin().read_line(&mut buffer) {
-            Ok(_) => Ok(StringReader::from(&buffer)),
-            Err(msg) => Err(ReadError::IoError(msg.to_string())),
+    fn next_line(&mut self) -> Result<StringReader, ReadError> {
+        match self.reader.readline("> ") {
+            Ok(line) => Ok(StringReader::from(&format!("{}\n", line))),
+            Err(err) => Err(err.into()),
         }
     }
 }
@@ -102,8 +110,8 @@ impl StdinReader {
 impl Reader for StdinReader {
     fn next(&mut self) -> Result<char, ReadError> {
         loop {
-            match self.iter.next() {
-                Err(ReadError::EndOfInput) => self.iter = StdinReader::next_line()?,
+            match self.buffer.next() {
+                Err(ReadError::EndOfInput) => self.buffer = self.next_line()?,
                 result => return result,
             }
         }
@@ -111,8 +119,8 @@ impl Reader for StdinReader {
 
     fn peek(&mut self) -> Result<char, ReadError> {
         loop {
-            match self.iter.peek() {
-                Err(ReadError::EndOfInput) => self.iter = StdinReader::next_line()?,
+            match self.buffer.peek() {
+                Err(ReadError::EndOfInput) => self.buffer = self.next_line()?,
                 result => return result,
             }
         }

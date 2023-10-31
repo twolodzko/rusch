@@ -1,5 +1,5 @@
 pub mod envir;
-mod errors;
+pub mod errors;
 pub mod eval;
 mod list;
 pub mod parser;

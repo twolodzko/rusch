@@ -31,7 +31,7 @@ fn main() {
         loop {
             match read_sexpr(reader) {
                 Ok(ref sexpr) => eval_and_print(sexpr, env),
-                Err(ReadError::Interrupted) => std::process::exit(0),
+                Err(ReadError::Interrupted) => return,
                 Err(msg) => println!("Error: {}", msg),
             }
         }

@@ -110,7 +110,6 @@ pub fn is_finite(args: &Args, env: &mut Env) -> FuncResult {
 /// - when `args` is empty, return `init`
 /// - when there is single element in `args`, return `func(init, arg)`
 /// - for more elements, fold the list with `func(acc, arg)`
-#[inline]
 fn list_reduce(
     args: &Args,
     env: &mut Env,
@@ -129,7 +128,6 @@ fn list_reduce(
 }
 
 /// Use `partial_cmp` to compare subsequent values
-#[inline]
 fn cmp(args: &Args, env: &mut Env, order: std::cmp::Ordering) -> FuncResult {
     let iter = &mut eval_iter(args, env);
 
@@ -217,13 +215,12 @@ impl ops::Rem<Sexpr> for Sexpr {
 }
 
 impl Sexpr {
-    #[inline]
     fn div_euclid(self, rhs: Self) -> FuncResult {
         op!(div_euclid | checked_div_euclid self rhs)
     }
 
     /// It is numeric, but NaN or infinite
-    #[inline]
+
     pub fn is_nan(self) -> bool {
         match self {
             Sexpr::Float(num) => num.is_nan() || num.is_infinite(),
@@ -233,7 +230,6 @@ impl Sexpr {
     }
 
     /// It is numeric and finite
-    #[inline]
     pub fn is_finite(self) -> bool {
         match self {
             Sexpr::Float(num) => num.is_finite(),

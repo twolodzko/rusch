@@ -24,7 +24,6 @@ where
     }
 
     /// Create environment inheriting from the current one
-    #[inline]
     pub fn branch(&self) -> Self {
         Env(Some(Rc::new(RefCell::new(EnvContainer {
             local: HashMap::new(),
@@ -33,14 +32,12 @@ where
     }
 
     /// Save key-value pair to the environment
-    #[inline]
     pub fn insert(&mut self, key: &str, val: T) {
         let mut env = self.unwrap().borrow_mut();
         env.local.insert(key.to_string(), val);
     }
 
     /// Get (recursively) value associated with the key if available
-    #[inline]
     pub fn get(&self, key: &str) -> Option<T> {
         let env = self.unwrap().borrow();
         if let Some(val) = env.local.get(key) {
@@ -53,11 +50,10 @@ where
         }
     }
 
-    /// Find (recursively) the enviroment that has some value associated with the key
-    #[inline]
+    /// Find (recursively) the environment that has some value associated with the key
     pub fn find_env(&self, key: &str) -> Option<Self> {
         let env = self.unwrap().borrow();
-        if env.local.get(key).is_some() {
+        if env.local.contains_key(key) {
             Some(self.clone())
         } else {
             match env.parent {
@@ -68,7 +64,6 @@ where
     }
 
     /// Extract the internal Env container
-    #[inline]
     fn unwrap(&self) -> &Rc<RefCell<EnvContainer<T>>> {
         self.0.as_ref().unwrap()
     }
@@ -97,7 +92,7 @@ where
 }
 
 // it is needed because otherwise we could be doing
-// infinitelly recursive comparisons when
+// infinitely recursive comparisons when
 // object in Env holds clone of the Env itself
 impl<T> PartialEq for Env<T> {
     fn eq(&self, other: &Self) -> bool {

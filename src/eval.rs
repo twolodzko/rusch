@@ -21,7 +21,6 @@ pub fn eval(sexpr: &Sexpr, env: &mut Env) -> FuncResult {
     }
 }
 
-#[inline]
 fn eval_list(list: &Args, env: &mut Env) -> TcoResult {
     let head = match list.head() {
         Some(head) => head,
@@ -40,7 +39,6 @@ fn eval_list(list: &Args, env: &mut Env) -> TcoResult {
 }
 
 /// Evaluate all the elements of the list but last, return last element unevaluated
-#[inline]
 pub fn eval_but_last(args: &Args, env: &mut Env) -> TcoResult {
     let iter = &mut args.iter();
     let mut last = iter.next().unwrap_or(&Sexpr::Nil);

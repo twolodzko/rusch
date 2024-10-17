@@ -19,19 +19,16 @@ struct Pair<T> {
 }
 
 impl<T> Pair<T> {
-    #[inline]
     fn new(this: T, next: MaybePair<T>) -> MaybePair<T> {
         Some(Rc::new(Pair { this, next }))
     }
 }
 
 impl<T> List<T> {
-    #[inline]
     pub fn empty() -> Self {
         List { head: None }
     }
 
-    #[inline]
     pub fn push_front(&self, elem: T) -> List<T> {
         List {
             head: Pair::new(elem, self.head.clone()),
@@ -51,24 +48,20 @@ impl<T> List<T> {
     }
 
     /// Extract first element of the list
-    #[inline]
     pub fn head(&self) -> Option<&T> {
         self.head.as_ref().map(|pair| &pair.this)
     }
 
     /// Extract list containing everyghing but the first element
-    #[inline]
     pub fn tail(&self) -> Option<List<T>> {
         let next = self.head.as_ref().and_then(|head| head.next.clone())?;
         Some(List { head: Some(next) })
     }
 
-    #[inline]
     pub fn tail_or_empty(&self) -> List<T> {
         self.tail().unwrap_or_default()
     }
 
-    #[inline]
     pub fn has_next(&self) -> bool {
         match self.head.as_ref() {
             None => false,
@@ -76,14 +69,12 @@ impl<T> List<T> {
         }
     }
 
-    #[inline]
     pub fn iter(&self) -> Iter<'_, T> {
         Iter {
             next: self.head.as_deref(),
         }
     }
 
-    #[inline]
     pub fn is_empty(&self) -> bool {
         self.head.is_none()
     }

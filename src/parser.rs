@@ -81,12 +81,10 @@ fn read_word(r: &mut impl Reader) -> Result<String, ReadError> {
     Ok(chars.into_iter().collect())
 }
 
-#[inline]
 fn is_special(c: char) -> bool {
     matches!(c, '(' | ')' | '[' | ']' | '\'' | '`' | ',' | '"' | ';')
 }
 
-#[inline]
 fn is_word_boundary(c: char) -> bool {
     c.is_whitespace() || is_special(c)
 }
@@ -137,7 +135,6 @@ fn read_special(r: &mut impl Reader, name: &str) -> Result<Sexpr, ReadError> {
     Ok(Sexpr::List(list))
 }
 
-#[inline]
 fn skip_whitespace(r: &mut impl Reader) -> Result<(), ReadError> {
     loop {
         match r.peek() {
@@ -154,7 +151,6 @@ fn skip_whitespace(r: &mut impl Reader) -> Result<(), ReadError> {
     Ok(())
 }
 
-#[inline]
 fn skip_line(r: &mut impl Reader) -> Result<(), ReadError> {
     loop {
         match r.next() {

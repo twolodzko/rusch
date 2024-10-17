@@ -43,7 +43,6 @@ pub fn lambda(args: &Args, env: &mut Env) -> FuncResult {
     lambda_init(vars, &body, env)
 }
 
-#[inline]
 pub fn lambda_init(vars: &List<Sexpr>, body: &List<Sexpr>, env: &mut Env) -> FuncResult {
     let vars: Result<Vec<String>, Error<Sexpr>> = vars
         .iter()
@@ -79,7 +78,6 @@ pub fn condfn(args: &Args, env: &mut Env) -> TcoResult {
 }
 
 pub fn define(args: &Args, env: &mut Env) -> FuncResult {
-    #[inline]
     fn from_symbol(key: &str, rest: &List<Sexpr>, env: &mut Env) -> FuncResult {
         if rest.has_next() {
             return Err(Error::WrongArgNum);
@@ -90,7 +88,6 @@ pub fn define(args: &Args, env: &mut Env) -> FuncResult {
         Ok(Sexpr::Nil)
     }
 
-    #[inline]
     fn from_list(list: &List<Sexpr>, rest: &List<Sexpr>, env: &mut Env) -> FuncResult {
         let key = head_or_err(list).and_then(symbol_or_err)?;
         let vars = list.tail_or_empty();
@@ -130,7 +127,6 @@ pub fn set(args: &Args, env: &mut Env) -> FuncResult {
     }
 }
 
-#[inline]
 fn eval_and_bind(
     args: &Args,
     eval_env: &mut Env,
@@ -177,7 +173,6 @@ pub fn let_star(args: &Args, env: &mut Env) -> TcoResult {
     let_impl(bindings, &body, &mut local.clone(), local)
 }
 
-#[inline]
 fn let_impl(bindings: &Args, body: &Args, call_env: &mut Env, eval_env: &mut Env) -> TcoResult {
     bindings.iter().try_for_each(|elem| {
         let binding = list_or_err(elem)?;
@@ -187,7 +182,6 @@ fn let_impl(bindings: &Args, body: &Args, call_env: &mut Env, eval_env: &mut Env
     eval_but_last(body, eval_env)
 }
 
-#[inline]
 fn named_let(key: &str, bindings: &Args, body: &Args, env: &mut Env) -> TcoResult {
     let local = &mut env.branch();
 

@@ -28,12 +28,10 @@ impl StringReader {
 }
 
 impl Reader for StringReader {
-    #[inline]
     fn peek(&mut self) -> Result<char, ReadError> {
         self.cache.peek().ok_or(ReadError::EndOfInput).cloned()
     }
 
-    #[inline]
     fn next(&mut self) -> Result<char, ReadError> {
         self.cache.next().ok_or(ReadError::EndOfInput)
     }

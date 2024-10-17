@@ -38,22 +38,18 @@ pub struct Lambda {
 }
 
 impl Sexpr {
-    #[inline]
     pub fn null() -> Sexpr {
         Sexpr::List(List::empty())
     }
 
-    #[inline]
     pub fn symbol(name: &str) -> Sexpr {
         Sexpr::Symbol(String::from(name))
     }
 
-    #[inline]
     pub fn lambda(vars: Vec<String>, body: List<Sexpr>, env: Env) -> Self {
         Sexpr::Lambda(Box::new(Lambda { vars, body, env }))
     }
 
-    #[inline]
     pub fn is_true(&self) -> bool {
         // see: https://www.scheme.com/tspl4/intro.html#./intro:s36
         !matches!(self, Sexpr::False)
@@ -167,7 +163,6 @@ impl fmt::Display for Lambda {
 }
 
 impl From<Sexpr> for List<Sexpr> {
-    #[inline]
     fn from(elem: Sexpr) -> Self {
         List::empty().push_front(elem)
     }

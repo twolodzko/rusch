@@ -1,6 +1,7 @@
 pub mod envir;
 pub mod errors;
 pub mod eval;
+mod kanren;
 mod list;
 pub mod parser;
 pub mod reader;

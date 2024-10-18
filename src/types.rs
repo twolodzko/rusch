@@ -8,6 +8,7 @@ pub enum Sexpr {
     True,
     False,
     Symbol(String),
+    Free(usize),
     Integer(Int),
     Float(Flt),
     String(String),
@@ -74,6 +75,7 @@ impl fmt::Display for Sexpr {
             True => write!(f, "#t"),
             False => write!(f, "#f"),
             Symbol(ref value) => write!(f, "{}", value),
+            Free(ref value) => write!(f, "_{}", value),
             String(ref value) => write!(f, "\"{}\"", value),
             Float(value) => value.fmt(f),
             Integer(value) => value.fmt(f),
@@ -101,6 +103,7 @@ impl std::cmp::PartialEq for Sexpr {
             (False, False) => true,
             (String(s), String(o)) => s == o,
             (Symbol(s), Symbol(o)) => s == o,
+            (Free(s), Free(o)) => s == o,
             // numbers
             (Integer(s), Integer(o)) => s == o,
             (Float(s), Float(o)) => s == o,

@@ -220,7 +220,6 @@ impl Sexpr {
     }
 
     /// It is numeric, but NaN or infinite
-
     pub fn is_nan(self) -> bool {
         match self {
             Sexpr::Float(num) => num.is_nan() || num.is_infinite(),

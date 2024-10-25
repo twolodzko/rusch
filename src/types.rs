@@ -1,5 +1,6 @@
 use crate::envir;
 use crate::errors::Error;
+use crate::kanren::Conde;
 use crate::list::List;
 use std::fmt;
 
@@ -8,7 +9,6 @@ pub enum Sexpr {
     True,
     False,
     Symbol(String),
-    Free(usize),
     Integer(Int),
     Float(Flt),
     String(String),
@@ -17,6 +17,10 @@ pub enum Sexpr {
     Tco(TcoFunc),
     Lambda(Box<Lambda>),
     Nil,
+    // miniKanren
+    Free(usize),
+    Conde(Conde),
+    Vars(Vars),
 }
 
 pub type Int = i64;
@@ -30,6 +34,8 @@ pub type Func = fn(&Args, &mut Env) -> FuncResult;
 
 pub type TcoResult = Result<(Sexpr, Option<Env>), Error<Sexpr>>;
 pub type TcoFunc = fn(&Args, &mut Env) -> TcoResult;
+
+pub type Vars = Vec<(Sexpr, Sexpr)>;
 
 #[derive(Clone, PartialEq)]
 pub struct Lambda {
@@ -75,7 +81,6 @@ impl fmt::Display for Sexpr {
             True => write!(f, "#t"),
             False => write!(f, "#f"),
             Symbol(ref value) => write!(f, "{}", value),
-            Free(ref value) => write!(f, "_{}", value),
             String(ref value) => write!(f, "\"{}\"", value),
             Float(value) => value.fmt(f),
             Integer(value) => value.fmt(f),
@@ -84,6 +89,19 @@ impl fmt::Display for Sexpr {
             Tco(ref func) => write!(f, "Func<{:#x}>", *func as usize),
             Lambda(ref lambda) => lambda.fmt(f),
             Nil => write!(f, "<nil>"),
+            // miniKanren
+            Free(ref value) => write!(f, "_{}", value),
+            Conde(ref conde) => {
+                let body = conde
+                    .branches
+                    .iter()
+                    .map(|sexpr| format!(" ({})", sexpr))
+                    .fold(std::string::String::new(), |acc, x| {
+                        format!("{}{}", acc, x)
+                    });
+                write!(f, "(conde{})", body)
+            }
+            Vars(_) => write!(f, "#s"),
         }
     }
 }

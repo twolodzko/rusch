@@ -1,4 +1,7 @@
-use crate::{list::List, types::{Env, Sexpr, Vars}};
+#![expect(dead_code)]
+#![expect(unused_variables)]
+
+use crate::types::{Env, FuncResult, Sexpr, Vars};
 use std::iter::zip;
 
 pub struct Run {
@@ -13,6 +16,7 @@ pub struct Conde {
     pub last: usize,
 }
 
+#[expect(clippy::only_used_in_recursion)]
 fn unify(lhs: &Sexpr, rhs: &Sexpr, mut vars: Vars, env: &mut Env) -> Option<Vars> {
     use Sexpr::*;
     match (lhs, rhs) {
@@ -24,35 +28,36 @@ fn unify(lhs: &Sexpr, rhs: &Sexpr, mut vars: Vars, env: &mut Env) -> Option<Vars
             }
             Some(vars)
         }
-        _ => if lhs == rhs {
-            Some(vars)
-        } else {
-            None
-        },
+        _ => {
+            if lhs == rhs {
+                Some(vars)
+            } else {
+                None
+            }
+        }
     }
 }
 
-pub(crate) fn reset(sexpr: &Sexpr) -> Sexpr{
-    use Sexpr::*;
-    match sexpr {
-        Conde(ref conde) => {
-            let mut conde = conde.clone();
-            conde.last = 0;
-            Conde(conde)
-        },
-        List(ref list) => {
-            List(list_map(list, reset))
-        },
-        Lambda(lambda) => {
-            let mut lambda = lambda.clone();
-            lambda.body = list_map(&lambda.body, reset);
-            Lambda(lambda)
-        },
-        _ => sexpr.clone(),
+impl Sexpr {
+    // Query the miniKanren expression
+    pub(crate) fn query(&mut self, env: &mut Env) -> FuncResult {
+        use Sexpr::*;
+        match self {
+            Conde(conde) => {
+                // reset conde and run it
+                conde.last = 0;
+                todo!()
+            }
+            Lambda(lambda) => {
+                // query lambda here
+                todo!()
+            }
+            _ => Ok(Sexpr::False),
+        }
     }
-}
 
-fn list_map(list: &List<Sexpr>, fun: fn(&Sexpr) -> Sexpr) -> List<Sexpr> {
-    let list: Vec<Sexpr> = list.iter().map(|x| fun(x)).collect();
-    List::from(list)
+    // Move to the next miniKanren expression and query it
+    pub(crate) fn query_next(&mut self, env: &mut Env) -> FuncResult {
+        todo!()
+    }
 }

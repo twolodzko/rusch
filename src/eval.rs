@@ -65,10 +65,14 @@ pub fn eval_file(filename: &str, env: &mut Env) -> FuncResult {
 
 impl Lambda {
     fn call(&self, args: &Args, env: &mut Env) -> TcoResult {
+        let local = &mut self.init(args, env)?;
+        eval_but_last(&self.body, local)
+    }
+
+    fn init(&self, args: &Args, env: &mut Env) -> Result<Env, Error<Sexpr>> {
         let local = &mut self.env.branch();
         let vars = &mut self.vars.iter();
         let args = &mut args.iter();
-
         loop {
             match (vars.next(), args.next()) {
                 (Some(var), Some(arg)) => {
@@ -79,8 +83,7 @@ impl Lambda {
                 _ => return Err(Error::WrongArgNum),
             }
         }
-
-        eval_but_last(&self.body, local)
+        Ok(local.clone())
     }
 }
 
